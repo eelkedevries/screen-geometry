@@ -1,0 +1,1784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Visual Angle Calculator</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #111a2e;
+      --panel-2: #0f172a;
+      --border: #2b3a55;
+      --text: #e7eefc;
+      --muted: #9eb0cf;
+      --accent: #4cc3ff;
+      --accent-soft: rgba(76, 195, 255, 0.12);
+      --button: #15223d;
+      --button-hover: #1c2d4f;
+      --shadow: 0 14px 32px rgba(0, 0, 0, 0.28);
+      --heading-bg: linear-gradient(180deg, #17233e, #14203a);
+      --salient: #67d3ff;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      background: radial-gradient(circle at top, #13203a 0%, var(--bg) 45%);
+      color: var(--text);
+      line-height: 1.45;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+    .wrap {
+      max-width: 1680px;
+      margin: 0 auto;
+      padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+    }
+    .banner {
+      background: linear-gradient(180deg, #16233c, #121c33);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 14px;
+    }
+    h1, h2, h3, h4 { margin: 0; line-height: 1.15; }
+    h1 { font-size: 2rem; margin-bottom: 6px; }
+    .sub { color: var(--muted); max-width: 1050px; }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 440px minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+    .panel {
+      background: linear-gradient(180deg, #121b31, #0f172a);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .panel-heading {
+      background: var(--heading-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .panel-heading-title {
+      color: var(--salient);
+      font-size: 1.45rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    .panel-body { padding: 14px; }
+    .panel-toolbar { display: flex; gap: 10px; margin-left: auto; }
+
+    .tool-btn, button {
+      appearance: none;
+      border: 1px solid #35507e;
+      color: var(--text);
+      background: var(--button);
+      border-radius: 10px;
+      padding: 10px 12px;
+      min-height: 44px;
+      font: inherit;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .tool-btn:hover, button:hover { background: var(--button-hover); }
+    .tool-btn.secondary { background: transparent; }
+    .share-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .section {
+      border: 1px solid rgba(56, 76, 113, 0.9);
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.72);
+      overflow: hidden;
+    }
+    .section + .section { margin-top: 12px; }
+    .section-header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 14px;
+      background: linear-gradient(180deg, rgba(21,34,61,0.95), rgba(18,28,51,0.95));
+      border: 0;
+      border-bottom: 1px solid rgba(56, 76, 113, 0.9);
+      text-align: left;
+      color: var(--text);
+    }
+    .section-header h2 {
+      font-size: 1rem;
+      color: var(--salient);
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    .section-content { padding: 14px; }
+    .collapsed .section-content { display: none; }
+    .caret { font-size: 0.9rem; color: var(--muted); }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .field-grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .pair-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .subsection-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-top: 14px;
+      background: rgba(255,255,255,0.02);
+    }
+    .subsection-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--muted);
+      margin: 0 0 10px 0;
+      text-transform: uppercase;
+    }
+    .geometry-row {
+      display: grid;
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    /* Tab switcher for geometry input modes */
+    .geo-tab-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      background: rgba(11, 20, 39, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 14px;
+    }
+    .geo-tab {
+      appearance: none;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      border-radius: 9px;
+      padding: 9px 10px;
+      min-height: 40px;
+      font: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .geo-tab:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+    .geo-tab.active {
+      background: linear-gradient(180deg, #1c2d4f, #162445);
+      border-color: #35507e;
+      color: var(--text);
+    }
+    .geo-tab-panel { display: none; }
+    .geo-tab-panel.active { display: block; }
+
+    /* Two-column field row: label | physical input | pixel input */
+    .geo-field-row {
+      display: grid;
+      grid-template-columns: 90px 1fr 1fr;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .geo-field-row label { font-size: 0.88rem; font-weight: 700; color: #dbe7ff; margin: 0; }
+    .geo-field-row .field { margin: 0; }
+    .geo-col-headers {
+      display: grid;
+      grid-template-columns: 90px 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    .geo-col-header {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .geo-derived {
+      opacity: 0.65;
+    }
+    .geo-derived input {
+      background: rgba(11, 20, 39, 0.5);
+      cursor: not-allowed;
+    }
+    .field { display: grid; gap: 6px; }
+    .input-with-suffix { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 10px; }
+    .input-with-suffix .suffix { font-size: 0.92rem; color: var(--muted); font-weight: 600; white-space: nowrap; }
+    .input-with-suffix input, .input-with-suffix select { min-width: 0; }
+    .field.full { grid-column: 1 / -1; }
+    label { font-size: 0.92rem; font-weight: 700; color: #dbe7ff; }
+    .hint { font-size: 0.82rem; color: var(--muted); }
+    input, select {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid #39517c;
+      border-radius: 10px;
+      padding: 10px 11px;
+      font: inherit;
+      font-size: 16px;
+      color: var(--text);
+      background: #0b1427;
+    }
+    input:focus, select:focus {
+      outline: 2px solid rgba(76, 195, 255, 0.18);
+      border-color: var(--accent);
+    }
+    .radio-row, .inline-row {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .radio {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 8px 12px;
+      border: 1px solid #39517c;
+      border-radius: 10px;
+      background: #0b1427;
+    }
+    .radio input { width: auto; margin: 0; }
+
+    .status {
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 0.88rem;
+      border: 1px solid #3c547e;
+      background: rgba(255,255,255,0.03);
+      color: var(--muted);
+    }
+    .status.warn { color: #ffd07a; }
+    .status.good { color: #9ae8b2; }
+
+    .calibration-box {
+      margin-top: 12px;
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid #35507e;
+      background: rgba(11, 20, 39, 0.9);
+      display: grid;
+      gap: 12px;
+    }
+    .line-wrap { display: grid; gap: 8px; }
+    .cal-line {
+      width: 75%;
+      height: 0;
+      border-top: 4px solid #f5f7fb;
+      position: relative;
+      margin: 12px auto 12px 0;
+    }
+    .cal-line::before, .cal-line::after {
+      content: "";
+      position: absolute;
+      top: -10px;
+      width: 0;
+      height: 20px;
+      border-left: 3px solid #f5f7fb;
+    }
+    .cal-line::before { left: 0; }
+    .cal-line::after { right: 0; }
+
+    .output-grid { display: grid; gap: 14px; }
+    .legacy-hidden { display: none !important; }
+    .display-card .panel-body { padding: 10px 12px 14px; }
+    .display-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .display-model-box {
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(12,20,38,0.95), rgba(10,16,32,0.95));
+      border-radius: 18px;
+      padding: 14px;
+      overflow: hidden;
+    }
+    .diag-line {
+      text-align: center;
+      color: #b7c8e7;
+      font-size: 0.88rem;
+      margin-bottom: 10px;
+    }
+    .display-layout {
+      display: block;
+    }
+    .svg-wrap {
+      min-width: 0;
+      overflow: hidden;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+    #displaySvg {
+      width: 100%;
+      max-width: 420px;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+    }
+    .values-panel {
+      min-width: 0;
+      display: grid;
+      gap: 18px;
+    }
+    .values-panel-below {
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(56, 76, 113, 0.8);
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+    .physical-test-line {
+      width: 0;
+      height: 0;
+      border-top: 4px solid #f5f7fb;
+      position: relative;
+      min-width: 0;
+    }
+    .physical-test-line::before, .physical-test-line::after {
+      content: "";
+      position: absolute;
+      top: -10px;
+      width: 0;
+      height: 20px;
+      border-left: 3px solid #f5f7fb;
+    }
+    .physical-test-line::before { left: 0; }
+    .physical-test-line::after { right: 0; }
+    .value-group h3 {
+      font-size: 0.98rem;
+      color: var(--salient);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 10px;
+    }
+    .value-table {
+      display: grid;
+      grid-template-columns: minmax(120px, 1fr) minmax(0, 1.2fr);
+      gap: 8px 14px;
+      align-items: start;
+      font-size: 0.96rem;
+    }
+    .value-table .k { color: #c5d3eb; }
+    .value-table .v {
+      color: #f5f9ff;
+      font-weight: 700;
+      word-break: break-word;
+    }
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 14px;
+    }
+    .result-card {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+      background: rgba(9, 15, 29, 0.72);
+    }
+    .result-card h3 {
+      margin-bottom: 10px;
+      color: var(--salient);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      font-size: 0.95rem;
+    }
+    .metric-list { display: grid; gap: 8px; }
+    .metric {
+      display: grid;
+      gap: 3px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(56,76,113,0.5);
+    }
+    .metric:last-child { border-bottom: 0; padding-bottom: 0; }
+    .metric-label { font-size: 0.84rem; color: var(--muted); }
+    .metric-value { font-size: 1rem; font-weight: 800; }
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 0.92rem;
+      border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+      min-width: 420px;
+    }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid rgba(56,76,113,0.5); }
+    th { background: rgba(21,34,61,0.9); color: #d5e5ff; }
+    tr:last-child td { border-bottom: 0; }
+
+    @media (max-width: 1200px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 980px) {
+      .display-layout, .two-col { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 680px) {
+      .wrap { padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); }
+      .field-grid, .field-grid.cols-3, .result-grid { grid-template-columns: 1fr; }
+      .panel-heading { flex-wrap: wrap; }
+      .panel-toolbar { width: 100%; justify-content: flex-start; }
+      .display-actions { justify-content: stretch; flex-wrap: wrap; }
+      .display-actions > button { flex: 1 1 180px; }
+      h1 { font-size: 1.65rem; }
+    }
+    @media (max-width: 560px) {
+      .banner { padding: 14px; }
+      .panel-body { padding: 12px; }
+      .section-content { padding: 12px; }
+      .display-model-box { padding: 10px; }
+      .diag-line { font-size: 0.82rem; line-height: 1.35; }
+      .value-table { grid-template-columns: minmax(110px, 1fr) minmax(0, 1fr); gap: 6px 10px; font-size: 0.9rem; }
+      table { min-width: 360px; }
+    }
+    @media (max-width: 420px) {
+      .pair-grid { grid-template-columns: 1fr; }
+      .panel-heading-title { font-size: 1.2rem; }
+      .section-header h2 { font-size: 0.95rem; }
+      .radio-row { gap: 10px; }
+      .radio { width: 100%; justify-content: flex-start; }
+      .display-model-box { padding: 8px; }
+      table { min-width: 320px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="banner">
+      <h1>Visual Angle Calculator</h1>
+      <p class="sub">Convert between pixels, centimeter, millimeter, inch, degrees, and arcminutes for vision science and eye-tracking workflows. The calculator uses exact geometric formulas rather than small-angle approximations.</p>
+    </div>
+
+    <div class="main-grid">
+      <div class="panel" id="inputPanel">
+        <div class="panel-heading">
+          <div class="panel-heading-title">INPUT</div>
+          <div class="panel-toolbar">
+            <button class="tool-btn" id="resetBtn" type="button">RESET</button>
+            <button class="tool-btn secondary" id="collapseBtn" type="button">Collapse all</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="section" id="sec-unit">
+            <button class="section-header" type="button" data-section="unit">
+              <h2>1. Measurement unit</h2><span class="caret">▾</span>
+            </button>
+            <div class="section-content">
+              <div class="field-grid">
+                <div class="field full">
+                  <label>System</label>
+                  <div class="radio-row">
+                    <label class="radio"><input type="radio" name="measurementSystem" value="metric" checked> Metric</label>
+                    <label class="radio"><input type="radio" name="measurementSystem" value="imperial"> Imperial</label>
+                  </div>
+                </div>
+                <div class="field" style="display:none;">
+                  <label for="primaryUnit">Primary unit</label>
+                  <select id="primaryUnit" aria-hidden="true" tabindex="-1">
+                    <option value="cm" selected>Centimeter</option>
+                    <option value="in">Inch</option>
+                  </select>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="section" id="sec-geometry">
+            <button class="section-header" type="button" data-section="geometry">
+              <h2>2. Screen geometry</h2><span class="caret">▾</span>
+            </button>
+            <div class="section-content">
+
+              <!-- Tab bar — replaces radio buttons -->
+              <div class="geo-tab-bar" role="tablist" aria-label="Input mode">
+                <button class="geo-tab active" id="geoTabWh" role="tab" aria-selected="true" aria-controls="geoPanelWh" type="button">Width + height</button>
+                <button class="geo-tab" id="geoTabDiag" role="tab" aria-selected="false" aria-controls="geoPanelDiag" type="button">Diagonal + aspect ratio</button>
+              </div>
+
+              <!-- Hidden radio inputs kept for JS compatibility -->
+              <div style="display:none;">
+                <input type="radio" name="geometryMode" id="geometryModeWh" value="wh" checked>
+                <input type="radio" name="geometryMode" id="geometryModeDiag" value="diag">
+              </div>
+
+              <!-- Tab panel: Width + height -->
+              <div class="geo-tab-panel active" id="geoPanelWh" role="tabpanel" aria-labelledby="geoTabWh">
+                <div class="geo-col-headers">
+                  <div></div>
+                  <div class="geo-col-header">Physical size</div>
+                  <div class="geo-col-header">Pixels</div>
+                </div>
+                <div class="geo-field-row" id="screenWidthRow">
+                  <label for="screenWidth">Width</label>
+                  <div class="input-with-suffix">
+                    <input id="screenWidth" type="number" inputmode="decimal" autocomplete="off" min="0" step="any" value="70.842" />
+                    <span class="suffix unit-suffix-primary">cm</span>
+                  </div>
+                  <div class="input-with-suffix">
+                    <input id="resX" type="number" inputmode="decimal" autocomplete="off" min="1" step="1" value="2560" />
+                    <span class="suffix">px</span>
+                  </div>
+                </div>
+                <div class="geo-field-row" id="screenHeightRow">
+                  <label for="screenHeight">Height</label>
+                  <div class="input-with-suffix">
+                    <input id="screenHeight" type="number" inputmode="decimal" autocomplete="off" min="0" step="any" value="39.848" />
+                    <span class="suffix unit-suffix-primary">cm</span>
+                  </div>
+                  <div class="input-with-suffix">
+                    <input id="resY" type="number" inputmode="decimal" autocomplete="off" min="1" step="1" value="1440" />
+                    <span class="suffix">px</span>
+                  </div>
+                </div>
+                <div class="field" id="resPresetRow" style="margin-top:4px;">
+                  <label for="resPreset">Resolution preset</label>
+                  <select id="resPreset">
+                    <option value="custom">Custom</option>
+                                        <option value="1680x1050">1680 × 1050</option>
+                    <option value="1920x1080">1920 × 1080</option>
+                    <option value="1920x1200">1920 × 1200</option>
+                    <option value="2560x1440" selected>2560 × 1440</option>
+                    <option value="3840x2160">3840 × 2160</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Tab panel: Diagonal + aspect ratio -->
+              <div class="geo-tab-panel" id="geoPanelDiag" role="tabpanel" aria-labelledby="geoTabDiag">
+                <div class="field-grid" id="aspectDiagRow">
+                  <div class="field">
+                    <label for="aspectRatio">Aspect ratio</label>
+                    <input id="aspectRatio" type="text" value="16:9" list="aspectRatioList" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g., 16:9" />
+                    <datalist id="aspectRatioList">
+                      <option value="16:9"></option>
+                      <option value="16:10"></option>
+                      <option value="4:3"></option>
+                      <option value="21:9"></option>
+                      <option value="3:2"></option>
+                    </datalist>
+                  </div>
+                  <div class="field" id="diagFieldWrap">
+                    <label for="screenDiagonalIn">Diagonal (inches)</label>
+                    <input id="screenDiagonalIn" type="number" inputmode="decimal" autocomplete="off" min="0" step="any" value="32" placeholder="e.g., 27" />
+                  </div>
+                </div>
+                <div class="field" style="margin-top:10px;">
+                  <label for="resPresetDiag">Resolution preset</label>
+                  <select id="resPresetDiag">
+                    <option value="custom">Custom</option>
+                                        <option value="1680x1050">1680 × 1050</option>
+                    <option value="1920x1080">1920 × 1080</option>
+                    <option value="1920x1200">1920 × 1200</option>
+                    <option value="2560x1440" selected>2560 × 1440</option>
+                    <option value="3840x2160">3840 × 2160</option>
+                  </select>
+                </div>
+                <div class="field-grid" id="diagCustomResRow" style="margin-top:10px; display:none;">
+                  <div class="field">
+                    <label for="resXDiag">Custom width (px)</label>
+                    <div class="input-with-suffix">
+                      <input id="resXDiag" type="number" inputmode="decimal" autocomplete="off" min="1" step="1" value="2560" />
+                      <span class="suffix">px</span>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="resYDiag">Custom height (px)</label>
+                    <div class="input-with-suffix">
+                      <input id="resYDiag" type="number" inputmode="decimal" autocomplete="off" min="1" step="1" value="1440" />
+                      <span class="suffix">px</span>
+                    </div>
+                  </div>
+                </div>
+                <!-- Derived width/height shown as read-only -->
+                <div style="margin-top:10px;">
+                  <div class="geo-col-headers">
+                    <div></div>
+                    <div class="geo-col-header">Derived physical</div>
+                    <div class="geo-col-header">Pixels</div>
+                  </div>
+                  <div class="geo-field-row geo-derived">
+                    <label>Width</label>
+                    <div class="input-with-suffix">
+                      <input id="screenWidthDerived" type="number" tabindex="-1" readonly />
+                      <span class="suffix unit-suffix-primary">cm</span>
+                    </div>
+                    <div class="input-with-suffix">
+                      <input id="resXDerived" type="number" tabindex="-1" readonly />
+                      <span class="suffix">px</span>
+                    </div>
+                  </div>
+                  <div class="geo-field-row geo-derived">
+                    <label>Height</label>
+                    <div class="input-with-suffix">
+                      <input id="screenHeightDerived" type="number" tabindex="-1" readonly />
+                      <span class="suffix unit-suffix-primary">cm</span>
+                    </div>
+                    <div class="input-with-suffix">
+                      <input id="resYDerived" type="number" tabindex="-1" readonly />
+                      <span class="suffix">px</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Viewing distance — always visible, below both tabs -->
+              <div style="margin-top:14px; padding-top:14px; border-top:1px solid rgba(56,76,113,0.5);">
+                <div class="geo-field-row" style="grid-template-columns: 130px 1fr; margin-bottom:0;">
+                  <label for="distance">Viewing distance</label>
+                  <div class="input-with-suffix">
+                    <input id="distance" type="number" inputmode="decimal" autocomplete="off" min="0" step="any" value="57.297" />
+                    <span class="suffix unit-suffix-primary">cm</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="section" id="sec-stimulus">
+            <button class="section-header" type="button" data-section="stimulus">
+              <h2>3. Stimulus dimensions</h2><span class="caret">▾</span>
+            </button>
+            <div class="section-content">
+              <div class="field-grid cols-3">
+                <div class="field">
+                  <label for="stimUnit">Unit of measurement</label>
+                  <select id="stimUnit">
+                    <option value="deg" selected>Degree</option>
+                    <option value="arcmin">Arcminute</option>
+                    <option value="px">Pixel</option>
+                    <option value="cm">Centimeter</option>
+                    <option value="mm">Millimeter</option>
+                    <option value="in">Inch</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="stimValue">Size</label>
+                  <input id="stimValue" type="number" inputmode="decimal" autocomplete="off" min="0" step="any" value="1" />
+                </div>
+                <div class="field">
+                  <label for="stimShape">Shape</label>
+                  <select id="stimShape">
+                    <option value="circle" selected>Circle</option>
+                    <option value="square">Square</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="stimOffsetValue">Offset (center)</label>
+                  <input id="stimOffsetValue" type="number" inputmode="decimal" autocomplete="off" step="any" value="0" />
+                </div>
+                <div class="field">
+                  <label for="stimOffsetAngle">Offset (angle)</label>
+                  <input id="stimOffsetAngle" type="number" inputmode="decimal" autocomplete="off" step="any" value="0" />
+                </div>
+              </div>
+              <div class="hint" style="margin-top:10px;">For circles, size is radius. For squares, size is side length. Offset angle uses 0° = right and 90° = up.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" id="outputPanel">
+        <div class="panel-heading">
+          <div class="panel-heading-title">OUTPUT</div>
+        </div>
+        <div class="panel-body output-grid">
+          <div class="panel display-card">
+            <div class="panel-heading" style="padding: 12px 14px;">
+              <h2 style="font-size:1rem; color:var(--salient); text-transform:uppercase; letter-spacing:0.03em;">Display model</h2>
+            </div>
+            <div class="panel-body" id="displayModelSection">
+              <div class="display-actions">
+                <button id="copyImageBtn" type="button">Copy output</button>
+                <a id="shareOutputBtn" class="tool-btn share-link" href="#" target="_blank" rel="noopener">Share output</a>
+              </div>
+              <div class="display-model-box">
+                <div class="display-layout">
+                  <div class="svg-wrap">
+                    <svg id="displaySvg" viewBox="0 0 880 540" xmlns="http://www.w3.org/2000/svg" aria-label="Display model"></svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel display-card">
+            <div class="panel-heading" style="padding: 12px 14px;">
+              <h2 style="font-size:1rem; color:var(--salient); text-transform:uppercase; letter-spacing:0.03em;">Display geometry</h2>
+            </div>
+            <div class="panel-body">
+              <div id="displayGeometryTable"></div>
+            </div>
+          </div>
+
+          <div class="panel display-card">
+            <div class="panel-heading" style="padding: 12px 14px;">
+              <h2 style="font-size:1rem; color:var(--salient); text-transform:uppercase; letter-spacing:0.03em;">Stimulus dimensions</h2>
+            </div>
+            <div class="panel-body">
+              <div id="stimulusTable"></div>
+            </div>
+          </div>
+
+          <div class="legacy-hidden" aria-hidden="true">
+            <div class="result-grid">
+              <div class="result-card">
+                <h3>Pixel pitch</h3>
+                <div class="metric-list">
+                  <div class="metric"><div class="metric-label">X pixel size</div><div id="pixSizeX" class="metric-value">—</div></div>
+                  <div class="metric"><div class="metric-label">Y pixel size</div><div id="pixSizeY" class="metric-value">—</div></div>
+                  <div class="metric"><div class="metric-label">Pixel density</div><div id="pixDensity" class="metric-value">—</div></div>
+                  <div class="metric"><div class="metric-label">Pixels per inch (PPI)</div><div id="ppiOut" class="metric-value">—</div></div>
+                </div>
+              </div>
+              <div class="result-card">
+                <h3>Angular conversion</h3>
+                <div class="metric-list">
+                  <div class="metric"><div class="metric-label">X pixels per degree</div><div id="pxPerDegX" class="metric-value">—</div></div>
+                  <div class="metric"><div class="metric-label">Y pixels per degree</div><div id="pxPerDegY" class="metric-value">—</div></div>
+                  <div class="metric"><div class="metric-label">Degrees per pixel</div><div id="degPerPixel" class="metric-value">—</div></div>
+                  <div class="metric"><div class="metric-label">Arcminutes per pixel</div><div id="arcminPerPixel" class="metric-value">—</div></div>
+                </div>
+              </div>
+              <div class="result-card">
+                <h3>Screen angular span</h3>
+                <div class="metric-list">
+                  <div class="metric"><div class="metric-label">X span</div><div id="screenDegX" class="metric-value">—</div></div>
+                  <div class="metric"><div class="metric-label">Y span</div><div id="screenDegY" class="metric-value">—</div></div>
+                  <div class="metric"><div class="metric-label">Diagonal span</div><div id="screenDegDiag" class="metric-value">—</div></div>
+                  <div class="metric"><div class="metric-label">Centimeter per degree</div><div id="cmPerDeg" class="metric-value">—</div></div>
+                </div>
+              </div>
+              <div class="result-card">
+                <h3>Browser information</h3>
+                <div class="metric-list">
+                  <div class="metric"><div class="metric-label">Current screen</div><div id="browserScreen" class="metric-value">—</div></div>
+                  <div class="metric"><div class="metric-label">Available area</div><div id="browserAvail" class="metric-value">—</div></div>
+                  <div class="metric"><div class="metric-label">devicePixelRatio</div><div id="browserDpr" class="metric-value">—</div></div>
+                  <div class="metric"><div class="metric-label">Warning</div><div id="browserWarn" class="metric-value">—</div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="two-col">
+              <div class="result-card">
+                <h3>Minimum pixel sizes</h3>
+                <div class="table-scroll"><table>
+                  <thead><tr><th>Angle</th><th>X</th><th>Y</th><th>Physical size</th></tr></thead>
+                  <tbody id="commonAnglesBody"></tbody>
+                </table></div>
+              </div>
+              <div class="result-card">
+                <h3>Validation</h3>
+                <div id="validationBox" class="status good">Values look plausible.</div>
+              </div>
+            </div>
+
+            <div class="result-card">
+              <h3>Physical size test</h3>
+              <div class="metric-list">
+                <div class="metric">
+                  <div class="metric-label">Target length</div>
+                  <div id="testLengthLabel" class="metric-value">—</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Expected width</div>
+                  <div id="testPixelsLabel" class="metric-value">—</div>
+                </div>
+              </div>
+              <div class="status" id="testNote" style="margin-top:12px;">Measure the line with a ruler.</div>
+              <div class="test-line-wrap" style="margin-top:14px; overflow-x:auto;">
+                <div id="physicalTestLine" class="physical-test-line" aria-label="Physical size test line"></div>
+              </div>
+            </div>
+          </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const els = {
+      primaryUnit: document.getElementById('primaryUnit'),
+      systemRadios: [...document.querySelectorAll('input[name="measurementSystem"]')],
+      geometryModeRadios: [...document.querySelectorAll('input[name="geometryMode"]')],
+      geometryFieldsWrap: document.getElementById('geoPanelWh'),
+      aspectDiagRow: document.getElementById('aspectDiagRow'),
+      resPresetRow: document.getElementById('resPresetRow'),
+      screenWidthRow: document.getElementById('screenWidthRow'),
+      screenHeightRow: document.getElementById('screenHeightRow'),
+      diagFieldWrap: document.getElementById('diagFieldWrap'),
+      resPresetDiag: document.getElementById('resPresetDiag'),
+      diagCustomResRow: document.getElementById('diagCustomResRow'),
+      resXDiag: document.getElementById('resXDiag'),
+      resYDiag: document.getElementById('resYDiag'),
+      screenWidthDerived: document.getElementById('screenWidthDerived'),
+      screenHeightDerived: document.getElementById('screenHeightDerived'),
+      resXDerived: document.getElementById('resXDerived'),
+      resYDerived: document.getElementById('resYDerived'),
+      geoTabWh: document.getElementById('geoTabWh'),
+      geoTabDiag: document.getElementById('geoTabDiag'),
+      geoPanelWh: document.getElementById('geoPanelWh'),
+      geoPanelDiag: document.getElementById('geoPanelDiag'),
+      screenWidth: document.getElementById('screenWidth'),
+      screenHeight: document.getElementById('screenHeight'),
+      screenDiagonalIn: document.getElementById('screenDiagonalIn'),
+      aspectRatio: document.getElementById('aspectRatio'),
+      distance: document.getElementById('distance'),
+      resPreset: document.getElementById('resPreset'),
+      resX: document.getElementById('resX'),
+      resY: document.getElementById('resY'),
+      stimUnit: document.getElementById('stimUnit'),
+      stimValue: document.getElementById('stimValue'),
+      stimShape: document.getElementById('stimShape'),
+      stimOffsetValue: document.getElementById('stimOffsetValue'),
+      stimOffsetAngle: document.getElementById('stimOffsetAngle'),
+      resetBtn: document.getElementById('resetBtn'),
+      collapseBtn: document.getElementById('collapseBtn'),
+      detectDisplaysBtn: document.getElementById('detectDisplaysBtn'),
+      displaySelect: document.getElementById('displaySelect'),
+      displayStatus: document.getElementById('displayStatus'),
+      displayDetails: document.getElementById('displayDetails'),
+      displaySvg: document.getElementById('displaySvg'),
+      displayGeometryTable: document.getElementById('displayGeometryTable'),
+      stimulusTable: document.getElementById('stimulusTable'),
+      copyImageBtn: document.getElementById('copyImageBtn'),
+      shareOutputBtn: document.getElementById('shareOutputBtn'),
+      commonAnglesBody: document.getElementById('commonAnglesBody'),
+      validationBox: document.getElementById('validationBox'),
+      pixSizeX: document.getElementById('pixSizeX'),
+      pixSizeY: document.getElementById('pixSizeY'),
+      pixDensity: document.getElementById('pixDensity'),
+      ppiOut: document.getElementById('ppiOut'),
+      pxPerDegX: document.getElementById('pxPerDegX'),
+      pxPerDegY: document.getElementById('pxPerDegY'),
+      degPerPixel: document.getElementById('degPerPixel'),
+      arcminPerPixel: document.getElementById('arcminPerPixel'),
+      screenDegX: document.getElementById('screenDegX'),
+      screenDegY: document.getElementById('screenDegY'),
+      screenDegDiag: document.getElementById('screenDegDiag'),
+      cmPerDeg: document.getElementById('cmPerDeg'),
+      browserScreen: document.getElementById('browserScreen'),
+      browserAvail: document.getElementById('browserAvail'),
+      browserDpr: document.getElementById('browserDpr'),
+      browserWarn: document.getElementById('browserWarn'),
+      testLengthLabel: document.getElementById('testLengthLabel'),
+      testPixelsLabel: document.getElementById('testPixelsLabel'),
+      testNote: document.getElementById('testNote'),
+      physicalTestLine: document.getElementById('physicalTestLine')
+    };
+
+    const defaults = {
+      measurementSystem: 'metric',
+      primaryUnit: 'cm',
+      geometryMode: 'diag',
+      screenWidth: 70.842,
+      screenHeight: 39.848,
+      screenDiagonalIn: 32,
+      aspectRatio: '16:9',
+      distance: 57.297,
+      resX: 2560,
+      resY: 1440,
+      resPreset: '2560x1440',
+      stimUnit: 'deg',
+      stimValue: 1,
+      stimShape: 'circle',
+      stimOffsetValue: 0,
+      stimOffsetAngle: 0
+    };
+
+    const CM_PER_IN = 2.54;
+    let detectedDisplays = [];
+
+    const q = sel => document.querySelector(sel);
+    const qa = sel => [...document.querySelectorAll(sel)];
+
+    function fmt(value, digits = 3) {
+      if (!isFinite(value)) return '—';
+      const abs = Math.abs(value);
+      if (abs >= 1000) return value.toFixed(1);
+      if (abs >= 100) return value.toFixed(2);
+      return value.toFixed(digits);
+    }
+    function fmtInt(v) { return isFinite(v) ? String(Math.round(v)) : '—'; }
+    function unitLabel(unit) {
+      return ({ cm: 'centimeter', mm: 'millimeter', in: 'inch', px: 'pixel', deg: 'degree', arcmin: 'arcminute' })[unit] || unit;
+    }
+    function toCm(value, unit) {
+      if (!isFinite(value)) return NaN;
+      return unit === 'cm' ? value : unit === 'mm' ? value / 10 : unit === 'in' ? value * CM_PER_IN : unit === 'px' ? NaN : unit === 'deg' ? NaN : unit === 'arcmin' ? NaN : NaN;
+    }
+    function fromCm(valueCm, unit) {
+      if (!isFinite(valueCm)) return NaN;
+      return unit === 'cm' ? valueCm : unit === 'mm' ? valueCm * 10 : unit === 'in' ? valueCm / CM_PER_IN : NaN;
+    }
+    function gcd(a, b) {
+      let x = Math.round(Math.abs(a));
+      let y = Math.round(Math.abs(b));
+      while (y) [x, y] = [y, x % y];
+      return x || 1;
+    }
+    function sizeToDeg(sizeCm, distCm) {
+      return 2 * Math.atan(sizeCm / (2 * distCm)) * 180 / Math.PI;
+    }
+    function degToSizeCm(deg, distCm) {
+      return 2 * distCm * Math.tan((deg * Math.PI / 180) / 2);
+    }
+    function currentSystem() { return q('input[name="measurementSystem"]:checked').value; }
+    function currentGeometryMode() { const checked = q('input[name="geometryMode"]:checked'); return checked ? checked.value : null; }
+
+    function parseAspectString(str) {
+      const s = String(str || '').trim();
+      let m = s.match(/^(\d+(?:\.\d+)?)\s*[:/xX]\s*(\d+(?:\.\d+)?)$/);
+      if (m) return { a: Number(m[1]), b: Number(m[2]) };
+      const n = Number(s);
+      if (n > 0) return { a: n, b: 1 };
+      return { a: 16, b: 9 };
+    }
+
+    function aspectStringFromResolution(x, y) {
+      if (!(x > 0) || !(y > 0)) return '';
+      const div = gcd(x, y);
+      return `${Math.round(x / div)}:${Math.round(y / div)}`;
+    }
+
+    function browserWindowSize() {
+      const dpr = window.devicePixelRatio || 1;
+      const vp = window.visualViewport;
+      const cssX = Math.max(1, Math.round((vp && vp.width) || window.innerWidth || document.documentElement.clientWidth || screen.width || 0));
+      const cssY = Math.max(1, Math.round((vp && vp.height) || window.innerHeight || document.documentElement.clientHeight || screen.height || 0));
+      return {
+        x: Math.max(1, Math.round(cssX * dpr)),
+        y: Math.max(1, Math.round(cssY * dpr)),
+        cssX,
+        cssY,
+        dpr
+      };
+    }
+
+    function syncAspectFromResolution() {
+      const x = Number(els.resX.value);
+      const y = Number(els.resY.value);
+      if (x > 0 && y > 0) els.aspectRatio.value = aspectStringFromResolution(x, y);
+    }
+
+    function setGeoTab(mode) {
+      const isDiag = mode === 'diag';
+      els.geoTabWh.classList.toggle('active', !isDiag);
+      els.geoTabDiag.classList.toggle('active', isDiag);
+      els.geoTabWh.setAttribute('aria-selected', String(!isDiag));
+      els.geoTabDiag.setAttribute('aria-selected', String(isDiag));
+      els.geoPanelWh.classList.toggle('active', !isDiag);
+      els.geoPanelDiag.classList.toggle('active', isDiag);
+      document.getElementById('geometryModeWh').checked = !isDiag;
+      document.getElementById('geometryModeDiag').checked = isDiag;
+    }
+
+    function updateGeometryFields() {
+      const mode = currentGeometryMode() || 'wh';
+      const showDiag = mode === 'diag';
+
+      if (showDiag) {
+        const diagCm = Number(els.screenDiagonalIn.value) * CM_PER_IN;
+        const { a, b } = parseAspectString(els.aspectRatio.value);
+        const norm = Math.hypot(a, b);
+        const unit = els.primaryUnit.value;
+        if (diagCm > 0 && norm > 0) {
+          const widthCm = diagCm * a / norm;
+          const heightCm = diagCm * b / norm;
+          const wPhys = fmt(fromCm(widthCm, unit), 6);
+          const hPhys = fmt(fromCm(heightCm, unit), 6);
+          els.screenWidth.value = wPhys;
+          els.screenHeight.value = hPhys;
+          if (els.screenWidthDerived) els.screenWidthDerived.value = wPhys;
+          if (els.screenHeightDerived) els.screenHeightDerived.value = hPhys;
+        }
+        if (els.resPresetDiag) els.resPresetDiag.value = els.resPreset.value;
+        if (els.diagCustomResRow) els.diagCustomResRow.style.display = els.resPreset.value === 'custom' ? '' : 'none';
+        if (els.resXDiag && els.resYDiag) {
+          els.resXDiag.value = els.resX.value;
+          els.resYDiag.value = els.resY.value;
+        }
+        if (els.resXDerived) els.resXDerived.value = els.resX.value;
+        if (els.resYDerived) els.resYDerived.value = els.resY.value;
+      } else if (els.diagCustomResRow) {
+        els.diagCustomResRow.style.display = 'none';
+      }
+    }
+
+    function updateUnitUI() {
+      const system = currentSystem();
+      els.primaryUnit.innerHTML = system === 'metric'
+        ? '<option value="cm">Centimeter</option>'
+        : '<option value="in">Inch</option>';
+      els.primaryUnit.value = system === 'metric' ? 'cm' : 'in';
+
+      const unit = els.primaryUnit.value;
+      qa('.unit-label').forEach(span => { span.textContent = unit; });
+      qa('.unit-suffix-primary').forEach(span => { span.textContent = unit; });
+    }
+
+    function convertDisplayedInputs(oldUnit, newUnit) {
+      if (oldUnit === newUnit) return;
+      const ids = ['screenWidth', 'screenHeight', 'distance'];
+      ids.forEach(id => {
+        const el = els[id];
+        const cm = toCm(Number(el.value), oldUnit);
+        if (isFinite(cm)) el.value = fmt(fromCm(cm, newUnit), 6);
+      });
+    }
+
+    function aspectParts() {
+      return parseAspectString(els.aspectRatio.value);
+    }
+
+    function getMetrics() {
+      const primary = els.primaryUnit.value;
+      const mode = currentGeometryMode();
+      if (!mode) return null;
+      let widthCm, heightCm;
+      if (mode === 'wh') {
+        widthCm = toCm(Number(els.screenWidth.value), primary);
+        heightCm = toCm(Number(els.screenHeight.value), primary);
+      } else {
+        const diagCm = Number(els.screenDiagonalIn.value) * CM_PER_IN;
+        const { a, b } = aspectParts();
+        const norm = Math.hypot(a, b);
+        widthCm = diagCm * a / norm;
+        heightCm = diagCm * b / norm;
+      }
+      const distCm = toCm(Number(els.distance.value), primary);
+      const resX = Number(els.resX.value);
+      const resY = Number(els.resY.value);
+      if (!(widthCm > 0) || !(heightCm > 0) || !(distCm > 0) || !(resX > 0) || !(resY > 0)) return null;
+
+      const diagCm = Math.hypot(widthCm, heightCm);
+      const diagIn = diagCm / CM_PER_IN;
+      const aspectDiv = gcd(resX, resY);
+      const pxCmX = widthCm / resX;
+      const pxCmY = heightCm / resY;
+      const diagPxCm = diagCm / Math.hypot(resX, resY);
+      const degPerPxX = sizeToDeg(pxCmX, distCm);
+      const degPerPxY = sizeToDeg(pxCmY, distCm);
+      const degPerPxDiag = sizeToDeg(diagPxCm, distCm);
+      const pxPerDegX = 1 / degPerPxX;
+      const pxPerDegY = 1 / degPerPxY;
+      const screenDegX = sizeToDeg(widthCm, distCm);
+      const screenDegY = sizeToDeg(heightCm, distCm);
+      const screenDegDiag = sizeToDeg(diagCm, distCm);
+      const ppi = Math.hypot(resX, resY) / diagIn;
+      const cmPerDeg = degToSizeCm(1, distCm);
+
+      return {
+        mode, primary, widthCm, heightCm, distCm, resX, resY, diagCm, diagIn,
+        aspectX: resX / aspectDiv, aspectY: resY / aspectDiv,
+        pxCmX, pxCmY, degPerPxX, degPerPxY, degPerPxDiag, pxPerDegX, pxPerDegY,
+        screenDegX, screenDegY, screenDegDiag, ppi, cmPerDeg
+      };
+    }
+
+    function sizeFromAny(value, unit, axis, m) {
+      if (!isFinite(value)) return { cm: NaN, pxX: NaN, pxY: NaN, deg: NaN };
+      let sizeCm;
+      if (unit === 'deg') sizeCm = degToSizeCm(value, m.distCm);
+      else if (unit === 'arcmin') sizeCm = degToSizeCm(value / 60, m.distCm);
+      else if (unit === 'px') sizeCm = value * (axis === 'y' ? m.pxCmY : m.pxCmX);
+      else if (unit === 'cm' || unit === 'mm' || unit === 'in') sizeCm = toCm(value, unit);
+      const deg = sizeToDeg(sizeCm, m.distCm);
+      return { cm: sizeCm, pxX: sizeCm / m.pxCmX, pxY: sizeCm / m.pxCmY, deg };
+    }
+
+    function getStimulusMetrics(m) {
+      if (!m) return null;
+      const unit = els.stimUnit.value;
+      const sizeVal = Number(els.stimValue.value);
+      const shape = els.stimShape.value;
+      const offsetVal = Number(els.stimOffsetValue.value);
+      const offsetUnit = els.stimUnit.value;
+      const angleDeg = Number(els.stimOffsetAngle.value);
+
+      const size = sizeFromAny(sizeVal, unit, 'x', m);
+      const offset = sizeFromAny(Math.abs(offsetVal), offsetUnit, 'x', m);
+      const sign = offsetVal < 0 ? -1 : 1;
+      const theta = angleDeg * Math.PI / 180;
+      const xCm = sign * offset.cm * Math.cos(theta);
+      const yCm = sign * offset.cm * Math.sin(theta);
+      const xPx = xCm / m.pxCmX;
+      const yPx = yCm / m.pxCmY;
+      const radiusOrHalfSideCm = size.cm;
+      const radiusOrHalfSidePxX = size.pxX;
+      const radiusOrHalfSidePxY = size.pxY;
+      const areaCm2 = shape === 'circle'
+        ? Math.PI * radiusOrHalfSideCm * radiusOrHalfSideCm
+        : radiusOrHalfSideCm * radiusOrHalfSideCm;
+      const areaDeg2 = shape === 'circle'
+        ? Math.PI * size.deg * size.deg
+        : size.deg * size.deg;
+      return {
+        shape, unit, sizeVal, angleDeg, offsetVal,
+        sizeCm: radiusOrHalfSideCm, sizeDeg: size.deg,
+        sizePxX: radiusOrHalfSidePxX, sizePxY: radiusOrHalfSidePxY,
+        offsetCm: sign * offset.cm, offsetDeg: sign * offset.deg,
+        xCm, yCm, xPx, yPx, areaCm2, areaDeg2
+      };
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function matrixTableHTML(columns, rows) {
+      const head = columns.map(col => `<th>${escapeHtml(col)}</th>`).join('');
+      const body = rows.map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell ?? '')}</td>`).join('')}</tr>`).join('');
+      return `<div class="table-scroll"><table class="matrix-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+    }
+
+    function updateTables(m, s) {
+      const columns = ['', 'cm', 'inch', 'degrees', 'pixels'];
+      if (!m) {
+        const blank = matrixTableHTML(columns, [['Status', 'Enter valid values', '', '', '']]);
+        els.displayGeometryTable.innerHTML = blank;
+        els.stimulusTable.innerHTML = blank;
+        return;
+      }
+
+      const diagPx = Math.hypot(m.resX, m.resY);
+      const displayRows = [
+        ['Width', fmt(m.widthCm, 3), fmt(m.widthCm / CM_PER_IN, 3), fmt(m.screenDegX, 2), fmtInt(m.resX)],
+        ['Height', fmt(m.heightCm, 3), fmt(m.heightCm / CM_PER_IN, 3), fmt(m.screenDegY, 2), fmtInt(m.resY)],
+        ['Diagonal', fmt(m.diagCm, 3), fmt(m.diagIn, 3), fmt(m.screenDegDiag, 2), fmt(diagPx, 0)],
+        ['Viewing distance', fmt(m.distCm, 3), fmt(m.distCm / CM_PER_IN, 3), '', '']
+      ];
+      els.displayGeometryTable.innerHTML = matrixTableHTML(columns, displayRows);
+
+      if (!s) {
+        els.stimulusTable.innerHTML = matrixTableHTML(columns, [['Status', 'Enter valid values', '', '', '']]);
+        return;
+      }
+
+      const sizeLabel = s.shape === 'circle' ? 'Radius' : 'Side length';
+      const stimRows = [
+        [sizeLabel, fmt(s.sizeCm, 3), fmt(s.sizeCm / CM_PER_IN, 3), fmt(s.sizeDeg, 3), `${fmt(s.sizePxX, 2)} / ${fmt(s.sizePxY, 2)}`],
+        ['Offset from centre', fmt(s.offsetCm, 3), fmt(s.offsetCm / CM_PER_IN, 3), fmt(s.offsetDeg, 3), `${fmt(s.offsetCm / m.pxCmX, 2)} / ${fmt(s.offsetCm / m.pxCmY, 2)}`],
+        ['Position X', fmt(s.xCm, 3), fmt(s.xCm / CM_PER_IN, 3), fmt(sizeToDeg(s.xCm, m.distCm), 3), fmt(s.xPx, 2)],
+        ['Position Y', fmt(s.yCm, 3), fmt(s.yCm / CM_PER_IN, 3), fmt(sizeToDeg(s.yCm, m.distCm), 3), fmt(s.yPx, 2)]
+      ];
+      els.stimulusTable.innerHTML = matrixTableHTML(columns, stimRows);
+    }
+
+    function updateCoreOutputs(m) {
+      if (!m) {
+        ['pixSizeX','pixSizeY','pixDensity','ppiOut','pxPerDegX','pxPerDegY','degPerPixel','arcminPerPixel','screenDegX','screenDegY','screenDegDiag','cmPerDeg'].forEach(id => els[id].textContent = '—');
+        return;
+      }
+      els.pixSizeX.textContent = `${fmt(m.pxCmX * 10, 4)} mm`;
+      els.pixSizeY.textContent = `${fmt(m.pxCmY * 10, 4)} mm`;
+      els.pixDensity.textContent = `${fmt(1 / m.pxCmX, 2)} px/cm (X); ${fmt(1 / m.pxCmY, 2)} px/cm (Y)`;
+      els.ppiOut.textContent = `${fmt(m.ppi, 2)} PPI`;
+      els.pxPerDegX.textContent = `${fmt(m.pxPerDegX, 2)} px/°`;
+      els.pxPerDegY.textContent = `${fmt(m.pxPerDegY, 2)} px/°`;
+      els.degPerPixel.textContent = `${fmt(m.degPerPxX, 5)}°/px (X); ${fmt(m.degPerPxY, 5)}°/px (Y)`;
+      els.arcminPerPixel.textContent = `${fmt(m.degPerPxX * 60, 3)} arcmin/px (X); ${fmt(m.degPerPxY * 60, 3)} arcmin/px (Y)`;
+      els.screenDegX.textContent = `${fmt(m.screenDegX, 3)}°`;
+      els.screenDegY.textContent = `${fmt(m.screenDegY, 3)}°`;
+      els.screenDegDiag.textContent = `${fmt(m.screenDegDiag, 3)}°`;
+      els.cmPerDeg.textContent = `${fmt(m.cmPerDeg, 4)} cm/°`;
+    }
+
+    function updateBrowserInfo() {
+      els.browserScreen.textContent = `${screen.width} × ${screen.height} CSS px`;
+      els.browserAvail.textContent = `${screen.availWidth} × ${screen.availHeight} CSS px`;
+      els.browserDpr.textContent = String(window.devicePixelRatio || 1);
+      els.browserWarn.textContent = (window.devicePixelRatio || 1) !== 1
+        ? 'Scaling or high-DPI mode is active.'
+        : 'No scaling indicated by devicePixelRatio.';
+    }
+
+
+    function updateCommonAngles(m) {
+      els.commonAnglesBody.innerHTML = '';
+      if (!m) return;
+      [0.1, 0.25, 0.5, 1, 2, 5].forEach(deg => {
+        const sizeCm = degToSizeCm(deg, m.distCm);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${fmt(deg,3)}°</td><td>${fmt(sizeCm / m.pxCmX, 2)} px</td><td>${fmt(sizeCm / m.pxCmY, 2)} px</td><td>${fmt(sizeCm, 3)} cm</td>`;
+        els.commonAnglesBody.appendChild(tr);
+      });
+    }
+
+    function updateValidation(m) {
+      if (!m) {
+        els.validationBox.className = 'status warn';
+        els.validationBox.textContent = 'Enter valid positive values for screen geometry, viewing distance, and screen resolution.';
+        return;
+      }
+      const messages = [];
+      if (m.distCm < 15) messages.push('Viewing distance is very short for most desktop setups.');
+      if (m.distCm > 200) messages.push('Viewing distance is unusually large for many lab setups.');
+      if (m.pxPerDegX < 5 || m.pxPerDegY < 5) messages.push('Pixels per degree are unusually low; check geometry, distance, or resolution.');
+      if (!messages.length) {
+        els.validationBox.className = 'status good';
+        els.validationBox.textContent = 'Values look plausible.';
+      } else {
+        els.validationBox.className = 'status warn';
+        els.validationBox.innerHTML = messages.map(m => `• ${m}`).join('<br>');
+      }
+    }
+
+
+    function updatePhysicalTest(m) {
+      if (!m) {
+        els.testLengthLabel.textContent = '—';
+        els.testPixelsLabel.textContent = '—';
+        els.testNote.textContent = 'Enter valid screen geometry to generate the test line.';
+        els.physicalTestLine.style.width = '0';
+        return;
+      }
+      const imperial = currentSystem() === 'imperial';
+      const targetLength = imperial ? 4 * CM_PER_IN : 10;
+      const targetLabel = imperial ? '4 in' : '10 cm';
+      const pxWidth = targetLength / m.pxCmX;
+      const cssWidth = pxWidth / (window.devicePixelRatio || 1);
+      els.testLengthLabel.textContent = `${targetLabel} (${fmt(targetLength, 3)} cm)`;
+      els.testPixelsLabel.textContent = `${fmt(pxWidth, 2)} px`;
+      els.testNote.textContent = `Measure the line below with a ruler. It should be ${targetLabel} long.`;
+      els.physicalTestLine.style.width = `${Math.max(0, cssWidth)}px`;
+    }
+
+    function renderDisplayModel(m, s) {
+      if (!m || !s) { els.displaySvg.innerHTML = ''; return; }
+      const W = 880, H = 540;
+      const leftMargin = 40, topMargin = 44, bottomMargin = 40, rightMargin = 40;
+      const availW = W - leftMargin - rightMargin;
+      const availH = H - topMargin - bottomMargin;
+      const scale = Math.min(availW / m.widthCm, availH / m.heightCm);
+      const dispW = m.widthCm * scale;
+      const dispH = m.heightCm * scale;
+      const dispX = leftMargin + (availW - dispW) / 2;
+      const dispY = topMargin + (availH - dispH) / 2;
+      const centerX = dispX + dispW / 2;
+      const centerY = dispY + dispH / 2;
+      const stimX = centerX + s.xCm * scale;
+      const stimY = centerY - s.yCm * scale;
+      const radiusX = s.sizeCm * scale;
+      const radiusY = s.sizeCm * scale;
+      const side = s.sizeCm * scale;
+
+      els.displaySvg.innerHTML = `
+        <rect x="0" y="0" width="${W}" height="${H}" fill="none"/>
+        <rect x="${dispX}" y="${dispY}" rx="20" ry="20" width="${dispW}" height="${dispH}" fill="#010c22" stroke="#4cc3ff" stroke-width="4"/>
+
+        ${s.shape === 'circle'
+          ? `<ellipse cx="${stimX}" cy="${stimY}" rx="${radiusX}" ry="${radiusY}" fill="rgba(76,195,255,0.22)" stroke="#4cc3ff" stroke-width="3"/>`
+          : `<rect x="${stimX - side/2}" y="${stimY - side/2}" width="${side}" height="${side}" fill="rgba(76,195,255,0.22)" stroke="#4cc3ff" stroke-width="3"/>`
+        }
+      `;
+    }
+
+    function escapeXml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+    }
+
+    function extractTableMatrix(container) {
+      const table = container.querySelector('table');
+      if (!table) return [];
+      return [...table.querySelectorAll('tr')].map(tr => [...tr.children].map(cell => cell.textContent.trim()));
+    }
+
+    function tableBlockSvg(title, matrix, x, y, width) {
+      if (!matrix.length) return { svg: '', height: 0 };
+      const ratios = [0.28, 0.18, 0.18, 0.18, 0.18];
+      const rowH = 42;
+      const titleGap = 18;
+      const headerFill = 'rgba(21,34,61,0.9)';
+      const cellFill = '#0f172a';
+      const border = '#2b3a55';
+      const text = '#e7eefc';
+      const muted = '#d5e5ff';
+      const accent = '#4cc3ff';
+      const tableY = y + 34;
+      let out = `<text x="${x}" y="${y}" fill="${accent}" font-size="24" font-weight="700">${escapeXml(title)}</text>`;
+      const colX = [x];
+      for (let i = 0; i < ratios.length; i++) colX[i + 1] = colX[i] + width * ratios[i];
+      for (let r = 0; r < matrix.length; r++) {
+        const rowY = tableY + r * rowH;
+        const fill = r === 0 ? headerFill : cellFill;
+        for (let c = 0; c < ratios.length; c++) {
+          const cellX = colX[c];
+          const cellW = width * ratios[c];
+          out += `<rect x="${cellX}" y="${rowY}" width="${cellW}" height="${rowH}" fill="${fill}" stroke="${border}"/>`;
+          const weight = r === 0 || c === 0 ? '700' : '400';
+          const color = r === 0 ? muted : text;
+          out += `<text x="${cellX + 10}" y="${rowY + 27}" fill="${color}" font-size="18" font-weight="${weight}">${escapeXml((matrix[r] && matrix[r][c]) || '')}</text>`;
+        }
+      }
+      return { svg: out, height: 34 + matrix.length * rowH + titleGap };
+    }
+
+    async function copyDisplayImage() {
+      const section = document.getElementById('displayModelSection');
+      const rect = section.getBoundingClientRect();
+      const scale = 2.5;
+      const svg = els.displaySvg.cloneNode(true);
+      const geomMatrix = extractTableMatrix(els.displayGeometryTable);
+      const stimMatrix = extractTableMatrix(els.stimulusTable);
+      const MODEL_W = 880;
+      const MODEL_H = 540;
+      const W = Math.max(1600, Math.round(rect.width * scale));
+      const margin = 36;
+      const innerW = W - margin * 2;
+      const modelScale = innerW / MODEL_W;
+      const modelRenderedH = MODEL_H * modelScale;
+      const tableGap = 26;
+      const tableW = (innerW - tableGap) / 2;
+      const tableTop = margin + modelRenderedH + 24;
+      const geomBlock = tableBlockSvg('DISPLAY GEOMETRY', geomMatrix, margin, tableTop, tableW);
+      const stimBlock = tableBlockSvg('STIMULUS DIMENSIONS', stimMatrix, margin + tableW + tableGap, tableTop, tableW);
+      const tablesH = Math.max(geomBlock.height, stimBlock.height);
+      const H = Math.max(1000, Math.round(tableTop + tablesH + 40));
+      const serializedModel = new XMLSerializer().serializeToString(svg).replace(/^<svg[^>]*>|<\/svg>$/g,'');
+      const bg = '#0f172a';
+      const card = '#111a2e';
+      const border = '#2b3a55';
+      const textColor = '#e7eefc';
+      const wrapperSvg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+          <rect width="100%" height="100%" fill="${bg}"/>
+          <rect x="20" y="20" width="${W - 40}" height="${H - 40}" rx="24" ry="24" fill="${card}" stroke="${border}"/>
+          <g transform="translate(${margin}, ${margin}) scale(${modelScale})">${serializedModel}</g>
+          ${geomBlock.svg}
+          ${stimBlock.svg}
+        </svg>`;
+      const blob = new Blob([wrapperSvg], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = async () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = W;
+        canvas.height = H;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        canvas.toBlob(async pngBlob => {
+          try {
+            if (navigator.clipboard && window.ClipboardItem) {
+              await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
+              alert('Display model image copied.');
+              return;
+            }
+            throw new Error('Clipboard image write not supported');
+          } catch (err) {
+            try {
+              if (navigator.share) {
+                const file = new File([pngBlob], 'display-model.png', { type: 'image/png' });
+                if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+                  await navigator.share({ files: [file], title: 'Display model' });
+                  return;
+                }
+              }
+            } catch (shareErr) {
+            }
+            const a = document.createElement('a');
+            a.href = canvas.toDataURL('image/png');
+            a.download = 'display-model.png';
+            a.click();
+          }
+        }, 'image/png');
+      };
+      img.src = url;
+    }
+
+    async function detectDisplays() {
+      if (!els.displaySelect || !els.displayStatus || !els.displayDetails) return;
+      detectedDisplays = [];
+      els.displaySelect.innerHTML = '<option value="manual">Manual entry</option>';
+      try {
+        if ('getScreenDetails' in window) {
+          els.displayStatus.textContent = 'Requesting display permission…';
+          const details = await window.getScreenDetails();
+          const screens = details.screens || [];
+          screens.forEach((s, i) => {
+            const obj = {
+              id: `screen-${i}`,
+              label: `${s.isPrimary ? 'Primary' : 'Secondary'} display ${i + 1}`,
+              width: s.width,
+              height: s.height,
+              availWidth: s.availWidth,
+              availHeight: s.availHeight,
+              left: s.left,
+              top: s.top,
+              devicePixelRatio: s.devicePixelRatio || window.devicePixelRatio || 1,
+              isPrimary: !!s.isPrimary,
+              isInternal: !!s.isInternal
+            };
+            detectedDisplays.push(obj);
+          });
+          els.displayStatus.textContent = detectedDisplays.length ? 'Connected displays detected.' : 'Permission granted, but no additional display data returned.';
+        } else {
+          detectedDisplays.push({
+            id: 'current-screen',
+            label: 'Current browser screen',
+            width: screen.width,
+            height: screen.height,
+            availWidth: screen.availWidth,
+            availHeight: screen.availHeight,
+            left: 0,
+            top: 0,
+            devicePixelRatio: window.devicePixelRatio || 1,
+            isPrimary: true,
+            isInternal: null
+          });
+          els.displayStatus.textContent = 'This browser does not support detailed multi-display detection. Only the current screen is available.';
+        }
+      } catch (err) {
+        detectedDisplays.push({
+          id: 'current-screen',
+          label: 'Current browser screen',
+          width: screen.width,
+          height: screen.height,
+          availWidth: screen.availWidth,
+          availHeight: screen.availHeight,
+          left: 0,
+          top: 0,
+          devicePixelRatio: window.devicePixelRatio || 1,
+          isPrimary: true,
+          isInternal: null
+        });
+        els.displayStatus.textContent = 'Display permission was not granted, or the browser blocked detailed display access.';
+      }
+      detectedDisplays.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.id;
+        opt.textContent = `${d.label} (${d.width} × ${d.height})`;
+        els.displaySelect.appendChild(opt);
+      });
+      updateDisplayDetails();
+    }
+
+    function updateDisplayDetails() {
+      if (!els.displaySelect || !els.displayDetails) return;
+      const id = els.displaySelect.value;
+      const d = detectedDisplays.find(x => x.id === id);
+      if (!d) {
+        els.displayDetails.textContent = 'Using manual screen settings. Browser APIs usually cannot provide exact physical size, brand, or model name.';
+        return;
+      }
+      els.displayDetails.innerHTML = [
+        `Name: ${d.label}`,
+        `Resolution: ${d.width} × ${d.height} CSS px`,
+        `Available area: ${d.availWidth} × ${d.availHeight} CSS px`,
+        `Position: left ${d.left}, top ${d.top}`,
+        `devicePixelRatio: ${d.devicePixelRatio}`,
+        `Primary: ${d.isPrimary ? 'yes' : 'no'}`,
+        `Internal: ${d.isInternal == null ? 'unknown' : d.isInternal ? 'yes' : 'no'}`,
+        `Brand/model/physical size: not exposed reliably by standard browser APIs`
+      ].join('<br>');
+      if (d.width && d.height) {
+        els.resX.value = d.width;
+        els.resY.value = d.height;
+        syncAspectFromResolution();
+      }
+    }
+
+    function currentShareUrl() {
+      return `${window.location.origin}${window.location.pathname}${window.location.search}${window.location.hash || ''}`;
+    }
+
+    function refreshShareOutputLink() {
+      if (!els.shareOutputBtn) return;
+      const url = currentShareUrl();
+      els.shareOutputBtn.href = url;
+      els.shareOutputBtn.setAttribute('aria-label', 'Share output');
+      els.shareOutputBtn.title = url;
+    }
+
+    function stateFromInputs() {
+      return {
+        measurementSystem: currentSystem(),
+        geometryMode: currentGeometryMode() || defaults.geometryMode,
+        screenWidth: els.screenWidth.value,
+        screenHeight: els.screenHeight.value,
+        screenDiagonalIn: els.screenDiagonalIn.value,
+        aspectRatio: els.aspectRatio.value,
+        distance: els.distance.value,
+        resPreset: els.resPreset.value,
+        resX: els.resX.value,
+        resY: els.resY.value,
+        stimUnit: els.stimUnit.value,
+        stimValue: els.stimValue.value,
+        stimShape: els.stimShape.value,
+        stimOffsetValue: els.stimOffsetValue.value,
+        stimOffsetAngle: els.stimOffsetAngle.value
+      };
+    }
+
+    function updateUrlFromState() {
+      if (!window.history || !window.history.replaceState) return;
+      const params = new URLSearchParams();
+      const state = stateFromInputs();
+      Object.entries(state).forEach(([key, value]) => {
+        if (value != null && String(value) !== '') params.set(key, String(value));
+      });
+      const qs = params.toString();
+      const newUrl = `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash || ''}`;
+      window.history.replaceState(null, '', newUrl);
+      refreshShareOutputLink();
+    }
+
+    function applyStateFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      if (![...params.keys()].length) return false;
+
+      const measurementSystem = params.get('measurementSystem');
+      if (measurementSystem === 'metric' || measurementSystem === 'imperial') {
+        els.systemRadios.forEach(r => r.checked = r.value === measurementSystem);
+        updateUnitUI();
+        oldUnitState.value = els.primaryUnit.value;
+      }
+
+      const geometryMode = params.get('geometryMode');
+      if (geometryMode === 'wh' || geometryMode === 'diag') setGeoTab(geometryMode);
+
+      const directMap = [
+        ['screenWidth', 'screenWidth'],
+        ['screenHeight', 'screenHeight'],
+        ['screenDiagonalIn', 'screenDiagonalIn'],
+        ['aspectRatio', 'aspectRatio'],
+        ['distance', 'distance'],
+        ['resPreset', 'resPreset'],
+        ['resX', 'resX'],
+        ['resY', 'resY'],
+        ['stimUnit', 'stimUnit'],
+        ['stimValue', 'stimValue'],
+        ['stimShape', 'stimShape'],
+        ['stimOffsetValue', 'stimOffsetValue'],
+        ['stimOffsetAngle', 'stimOffsetAngle']
+      ];
+      directMap.forEach(([param, elName]) => {
+        const value = params.get(param);
+        if (value != null && els[elName]) els[elName].value = value;
+      });
+
+      if (els.resPresetDiag) els.resPresetDiag.value = els.resPreset.value;
+      if (els.resXDiag) els.resXDiag.value = els.resX.value;
+      if (els.resYDiag) els.resYDiag.value = els.resY.value;
+      return true;
+    }
+
+    function resetDefaults() {
+      els.systemRadios.forEach(r => r.checked = r.value === defaults.measurementSystem);
+      updateUnitUI();
+      els.primaryUnit.value = defaults.primaryUnit;
+      setGeoTab(defaults.geometryMode || 'wh');
+      els.screenWidth.value = defaults.screenWidth;
+      els.screenHeight.value = defaults.screenHeight;
+      els.screenDiagonalIn.value = defaults.screenDiagonalIn;
+      els.aspectRatio.value = defaults.aspectRatio;
+      els.distance.value = defaults.distance;
+      els.resPreset.value = defaults.resPreset;
+      if (els.resPresetDiag) els.resPresetDiag.value = defaults.resPreset;
+      els.resX.value = defaults.resX;
+      els.resY.value = defaults.resY;
+      els.stimUnit.value = defaults.stimUnit;
+      els.stimValue.value = defaults.stimValue;
+      els.stimShape.value = defaults.stimShape;
+      els.stimOffsetValue.value = defaults.stimOffsetValue;
+      els.stimOffsetAngle.value = defaults.stimOffsetAngle;
+      qa('.section').forEach(sec => sec.classList.remove('collapsed'));
+      els.collapseBtn.textContent = 'Collapse all';
+      render();
+    }
+
+    function syncGeometryMode() {
+      updateGeometryFields();
+    }
+
+    function render() {
+      updateUnitUI();
+      syncGeometryMode();
+      updateBrowserInfo();
+      const m = getMetrics();
+      const s = getStimulusMetrics(m);
+      updateCoreOutputs(m);
+      updateTables(m, s || {});
+      updateCommonAngles(m);
+      updateValidation(m);
+      updatePhysicalTest(m);
+      renderDisplayModel(m, s);
+      updateUrlFromState();
+    }
+
+    qa('.section-header').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const section = btn.closest('.section');
+        section.classList.toggle('collapsed');
+        btn.querySelector('.caret').textContent = section.classList.contains('collapsed') ? '▸' : '▾';
+      });
+    });
+
+    els.collapseBtn.addEventListener('click', () => {
+      const sections = qa('.section');
+      const collapse = !sections.every(sec => sec.classList.contains('collapsed'));
+      sections.forEach(sec => {
+        sec.classList.toggle('collapsed', collapse);
+        sec.querySelector('.caret').textContent = collapse ? '▸' : '▾';
+      });
+      els.collapseBtn.textContent = collapse ? 'Expand all' : 'Collapse all';
+    });
+
+    const oldUnitState = { value: currentSystem() === 'imperial' ? 'in' : 'cm' };
+    els.systemRadios.forEach(r => r.addEventListener('change', () => {
+      const oldUnit = oldUnitState.value;
+      updateUnitUI();
+      const newUnit = els.primaryUnit.value;
+      convertDisplayedInputs(oldUnit, newUnit);
+      oldUnitState.value = newUnit;
+      render();
+    }));
+    if (els.primaryUnit) {
+      els.primaryUnit.addEventListener('change', () => {
+        const oldUnit = oldUnitState.value;
+        const newUnit = els.primaryUnit.value;
+        convertDisplayedInputs(oldUnit, newUnit);
+        oldUnitState.value = newUnit;
+        render();
+      });
+    }
+
+    els.geoTabWh.addEventListener('click', () => { setGeoTab('wh'); render(); });
+    els.geoTabDiag.addEventListener('click', () => { setGeoTab('diag'); render(); });
+
+    [els.screenWidth, els.screenHeight, els.screenDiagonalIn, els.aspectRatio, els.distance, els.resX, els.resY, els.resXDiag, els.resYDiag, els.stimUnit, els.stimValue, els.stimShape, els.stimOffsetValue, els.stimOffsetAngle].filter(Boolean).forEach(el => {
+      el.addEventListener('input', () => {
+        if (el === els.resX || el === els.resY || el === els.resXDiag || el === els.resYDiag) {
+          if (el === els.resXDiag) els.resX.value = els.resXDiag.value;
+          if (el === els.resYDiag) els.resY.value = els.resYDiag.value;
+          if (el === els.resX || el === els.resY) {
+            if (els.resXDiag) els.resXDiag.value = els.resX.value;
+            if (els.resYDiag) els.resYDiag.value = els.resY.value;
+          }
+          els.resPreset.value = 'custom';
+          if (els.resPresetDiag) els.resPresetDiag.value = 'custom';
+          syncAspectFromResolution();
+        }
+        render();
+      });
+      el.addEventListener('change', () => {
+        if (el === els.resX || el === els.resY || el === els.resXDiag || el === els.resYDiag) {
+          if (el === els.resXDiag) els.resX.value = els.resXDiag.value;
+          if (el === els.resYDiag) els.resY.value = els.resYDiag.value;
+          if (el === els.resX || el === els.resY) {
+            if (els.resXDiag) els.resXDiag.value = els.resX.value;
+            if (els.resYDiag) els.resYDiag.value = els.resY.value;
+          }
+          els.resPreset.value = 'custom';
+          if (els.resPresetDiag) els.resPresetDiag.value = 'custom';
+          syncAspectFromResolution();
+        }
+        render();
+      });
+    });
+
+    function applyResPreset(val) {
+      if (val !== 'custom') {
+        const [x, y] = val.split('x').map(Number);
+        els.resX.value = x;
+        els.resY.value = y;
+        if (els.resXDiag) els.resXDiag.value = x;
+        if (els.resYDiag) els.resYDiag.value = y;
+      }
+      syncAspectFromResolution();
+      render();
+    }
+
+    els.resPreset.addEventListener('change', () => {
+      if (els.resPresetDiag) els.resPresetDiag.value = els.resPreset.value;
+      applyResPreset(els.resPreset.value);
+    });
+    if (els.resPresetDiag) {
+      els.resPresetDiag.addEventListener('change', () => {
+        els.resPreset.value = els.resPresetDiag.value;
+        applyResPreset(els.resPresetDiag.value);
+      });
+    }
+    if (els.displaySelect) els.displaySelect.addEventListener('change', () => { updateDisplayDetails(); render(); });
+    if (els.detectDisplaysBtn) els.detectDisplaysBtn.addEventListener('click', detectDisplays);
+    els.resetBtn.addEventListener('click', resetDefaults);
+    els.copyImageBtn.addEventListener('click', copyDisplayImage);
+    if (els.shareOutputBtn) {
+      els.shareOutputBtn.addEventListener('click', async (event) => {
+        const url = currentShareUrl();
+        refreshShareOutputLink();
+        if (navigator.share) {
+          event.preventDefault();
+          try {
+            await navigator.share({ title: document.title, url });
+            return;
+          } catch (err) {
+            if (err && err.name === 'AbortError') return;
+          }
+        }
+        event.preventDefault();
+        try {
+          await navigator.clipboard.writeText(url);
+          const original = els.shareOutputBtn.textContent;
+          els.shareOutputBtn.textContent = 'Link copied';
+          setTimeout(() => { els.shareOutputBtn.textContent = original; }, 1400);
+        } catch (err) {
+          window.open(url, '_blank', 'noopener');
+        }
+      });
+    }
+    window.addEventListener('resize', render);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', render);
+    }
+
+    resetDefaults();
+    refreshShareOutputLink();
+    if (applyStateFromUrl()) render();
+  </script>
+</body>
+</html>
