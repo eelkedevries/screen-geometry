@@ -132,7 +132,6 @@
     }
     .section-content { padding: 14px; }
     .collapsed .section-content { display: none; }
-    .caret { font-size: 0.9rem; color: var(--muted); }
 
     .field-grid {
       display: grid;
@@ -479,7 +478,7 @@
   <div class="wrap">
     <div class="banner">
       <h1>Visual Angle Calculator</h1>
-      <p class="sub">Convert between pixels, centimeter, millimeter, inch, degrees, and arcminutes for vision science and eye-tracking workflows. The calculator uses exact geometric formulas rather than small-angle approximations.</p>
+      <p class="sub">Convert between pixels, centimeter, millimeter, inch, degrees, and arcminutes for vision science and eye-tracking workflows.</p>
     </div>
 
     <div class="main-grid">
@@ -488,14 +487,13 @@
           <div class="panel-heading-title">INPUT</div>
           <div class="panel-toolbar">
             <button class="tool-btn" id="resetBtn" type="button">RESET</button>
-            <button class="tool-btn secondary" id="collapseBtn" type="button">Collapse all</button>
-          </div>
+                      </div>
         </div>
         <div class="panel-body">
           <div class="section" id="sec-unit">
-            <button class="section-header" type="button" data-section="unit">
-              <h2>1. Measurement unit</h2><span class="caret">▾</span>
-            </button>
+            <div class="section-header static-section-header">
+              <h2>1. Measurement unit</h2>
+            </div>
             <div class="section-content">
               <div class="field-grid">
                 <div class="field full">
@@ -518,9 +516,9 @@
           </div>
 
           <div class="section" id="sec-geometry">
-            <button class="section-header" type="button" data-section="geometry">
-              <h2>2. Screen geometry</h2><span class="caret">▾</span>
-            </button>
+            <div class="section-header static-section-header">
+              <h2>2. Screen geometry</h2>
+            </div>
             <div class="section-content">
 
               <!-- Tab bar — replaces radio buttons -->
@@ -670,11 +668,18 @@
           </div>
 
           <div class="section" id="sec-stimulus">
-            <button class="section-header" type="button" data-section="stimulus">
-              <h2>3. Stimulus dimensions</h2><span class="caret">▾</span>
-            </button>
+            <div class="section-header static-section-header">
+              <h2>3. Stimulus dimensions</h2>
+            </div>
             <div class="section-content">
               <div class="field-grid cols-3">
+                <div class="field">
+                  <label for="stimShape">Shape</label>
+                  <select id="stimShape">
+                    <option value="circle" selected>Circle</option>
+                    <option value="square">Square</option>
+                  </select>
+                </div>
                 <div class="field">
                   <label for="stimUnit">Unit of measurement</label>
                   <select id="stimUnit">
@@ -689,13 +694,6 @@
                 <div class="field">
                   <label for="stimValue">Size</label>
                   <input id="stimValue" type="number" inputmode="decimal" autocomplete="off" min="0" step="any" value="1" />
-                </div>
-                <div class="field">
-                  <label for="stimShape">Shape</label>
-                  <select id="stimShape">
-                    <option value="circle" selected>Circle</option>
-                    <option value="square">Square</option>
-                  </select>
                 </div>
                 <div class="field">
                   <label for="stimOffsetValue">Offset (center)</label>
@@ -867,7 +865,6 @@
       stimOffsetValue: document.getElementById('stimOffsetValue'),
       stimOffsetAngle: document.getElementById('stimOffsetAngle'),
       resetBtn: document.getElementById('resetBtn'),
-      collapseBtn: document.getElementById('collapseBtn'),
       detectDisplaysBtn: document.getElementById('detectDisplaysBtn'),
       displaySelect: document.getElementById('displaySelect'),
       displayStatus: document.getElementById('displayStatus'),
@@ -956,6 +953,12 @@
     }
     function degToSizeCm(deg, distCm) {
       return 2 * distCm * Math.tan((deg * Math.PI / 180) / 2);
+    }
+    function eccentricityCmToDeg(offsetCm, distCm) {
+      return Math.atan(offsetCm / distCm) * 180 / Math.PI;
+    }
+    function degToEccentricityCm(deg, distCm) {
+      return distCm * Math.tan(deg * Math.PI / 180);
     }
     function currentSystem() { return q('input[name="measurementSystem"]:checked').value; }
     function currentGeometryMode() { const checked = q('input[name="geometryMode"]:checked'); return checked ? checked.value : null; }
@@ -1110,14 +1113,14 @@
       };
     }
 
-    function sizeFromAny(value, unit, axis, m) {
+    function sizeFromAny(value, unit, axis, m, interpretation = 'span') {
       if (!isFinite(value)) return { cm: NaN, pxX: NaN, pxY: NaN, deg: NaN };
       let sizeCm;
-      if (unit === 'deg') sizeCm = degToSizeCm(value, m.distCm);
-      else if (unit === 'arcmin') sizeCm = degToSizeCm(value / 60, m.distCm);
+      if (unit === 'deg') sizeCm = interpretation === 'ecc' ? degToEccentricityCm(value, m.distCm) : degToSizeCm(value, m.distCm);
+      else if (unit === 'arcmin') sizeCm = interpretation === 'ecc' ? degToEccentricityCm(value / 60, m.distCm) : degToSizeCm(value / 60, m.distCm);
       else if (unit === 'px') sizeCm = value * (axis === 'y' ? m.pxCmY : m.pxCmX);
       else if (unit === 'cm' || unit === 'mm' || unit === 'in') sizeCm = toCm(value, unit);
-      const deg = sizeToDeg(sizeCm, m.distCm);
+      const deg = interpretation === 'ecc' ? eccentricityCmToDeg(sizeCm, m.distCm) : sizeToDeg(sizeCm, m.distCm);
       return { cm: sizeCm, pxX: sizeCm / m.pxCmX, pxY: sizeCm / m.pxCmY, deg };
     }
 
@@ -1129,29 +1132,74 @@
       const offsetVal = Number(els.stimOffsetValue.value);
       const offsetUnit = els.stimUnit.value;
       const angleDeg = Number(els.stimOffsetAngle.value);
-
-      const size = sizeFromAny(sizeVal, unit, 'x', m);
-      const offset = sizeFromAny(Math.abs(offsetVal), offsetUnit, 'x', m);
       const sign = offsetVal < 0 ? -1 : 1;
       const theta = angleDeg * Math.PI / 180;
-      const xCm = sign * offset.cm * Math.cos(theta);
-      const yCm = sign * offset.cm * Math.sin(theta);
-      const xPx = xCm / m.pxCmX;
-      const yPx = yCm / m.pxCmY;
+
+      const sizeInterpretation = shape === 'circle' ? 'ecc' : 'span';
+      const size = sizeFromAny(sizeVal, unit, 'x', m, sizeInterpretation);
+
+      let offsetAbsCm;
+      let offsetAbsDeg;
+      let offsetAbsPx;
+      let xCm;
+      let yCm;
+      let xPx;
+      let yPx;
+
+      if (offsetUnit === 'deg') {
+        offsetAbsDeg = Math.abs(offsetVal);
+        offsetAbsCm = degToEccentricityCm(offsetAbsDeg, m.distCm);
+        xCm = sign * offsetAbsCm * Math.cos(theta);
+        yCm = sign * offsetAbsCm * Math.sin(theta);
+        xPx = xCm / m.pxCmX;
+        yPx = yCm / m.pxCmY;
+        offsetAbsPx = Math.hypot(xPx, yPx);
+      } else if (offsetUnit === 'arcmin') {
+        offsetAbsDeg = Math.abs(offsetVal) / 60;
+        offsetAbsCm = degToEccentricityCm(offsetAbsDeg, m.distCm);
+        xCm = sign * offsetAbsCm * Math.cos(theta);
+        yCm = sign * offsetAbsCm * Math.sin(theta);
+        xPx = xCm / m.pxCmX;
+        yPx = yCm / m.pxCmY;
+        offsetAbsPx = Math.hypot(xPx, yPx);
+      } else if (offsetUnit === 'px') {
+        offsetAbsPx = Math.abs(offsetVal);
+        xPx = sign * offsetAbsPx * Math.cos(theta);
+        yPx = sign * offsetAbsPx * Math.sin(theta);
+        xCm = xPx * m.pxCmX;
+        yCm = yPx * m.pxCmY;
+        offsetAbsCm = Math.hypot(xCm, yCm);
+        offsetAbsDeg = eccentricityCmToDeg(offsetAbsCm, m.distCm);
+      } else {
+        offsetAbsCm = toCm(Math.abs(offsetVal), offsetUnit);
+        xCm = sign * offsetAbsCm * Math.cos(theta);
+        yCm = sign * offsetAbsCm * Math.sin(theta);
+        xPx = xCm / m.pxCmX;
+        yPx = yCm / m.pxCmY;
+        offsetAbsPx = Math.hypot(xPx, yPx);
+        offsetAbsDeg = eccentricityCmToDeg(offsetAbsCm, m.distCm);
+      }
+
       const radiusOrHalfSideCm = size.cm;
       const radiusOrHalfSidePxX = size.pxX;
       const radiusOrHalfSidePxY = size.pxY;
+      const displayedSizeCm = shape === 'circle' ? radiusOrHalfSideCm * 2 : radiusOrHalfSideCm;
+      const displayedSizePx = shape === 'circle' ? radiusOrHalfSidePxX * 2 : radiusOrHalfSidePxX;
+      const displayedSizeDeg = shape === 'circle'
+        ? sizeToDeg(radiusOrHalfSideCm * 2, m.distCm)
+        : size.deg;
       const areaCm2 = shape === 'circle'
         ? Math.PI * radiusOrHalfSideCm * radiusOrHalfSideCm
         : radiusOrHalfSideCm * radiusOrHalfSideCm;
       const areaDeg2 = shape === 'circle'
-        ? Math.PI * size.deg * size.deg
+        ? Math.PI * Math.pow(eccentricityCmToDeg(radiusOrHalfSideCm, m.distCm), 2)
         : size.deg * size.deg;
       return {
         shape, unit, sizeVal, angleDeg, offsetVal,
         sizeCm: radiusOrHalfSideCm, sizeDeg: size.deg,
         sizePxX: radiusOrHalfSidePxX, sizePxY: radiusOrHalfSidePxY,
-        offsetCm: sign * offset.cm, offsetDeg: sign * offset.deg,
+        displayedSizeCm, displayedSizeDeg, displayedSizePx,
+        offsetCm: sign * offsetAbsCm, offsetDeg: sign * offsetAbsDeg, offsetPx: sign * offsetAbsPx,
         xCm, yCm, xPx, yPx, areaCm2, areaDeg2
       };
     }
@@ -1193,12 +1241,12 @@
         return;
       }
 
-      const sizeLabel = s.shape === 'circle' ? 'Radius' : 'Side length';
+      const sizeLabel = s.shape === 'circle' ? 'Diameter' : 'Width';
       const stimRows = [
-        [sizeLabel, fmt(s.sizeCm, 3), fmt(s.sizeCm / CM_PER_IN, 3), fmt(s.sizeDeg, 3), `${fmt(s.sizePxX, 2)} / ${fmt(s.sizePxY, 2)}`],
-        ['Offset from centre', fmt(s.offsetCm, 3), fmt(s.offsetCm / CM_PER_IN, 3), fmt(s.offsetDeg, 3), `${fmt(s.offsetCm / m.pxCmX, 2)} / ${fmt(s.offsetCm / m.pxCmY, 2)}`],
-        ['Position X', fmt(s.xCm, 3), fmt(s.xCm / CM_PER_IN, 3), fmt(sizeToDeg(s.xCm, m.distCm), 3), fmt(s.xPx, 2)],
-        ['Position Y', fmt(s.yCm, 3), fmt(s.yCm / CM_PER_IN, 3), fmt(sizeToDeg(s.yCm, m.distCm), 3), fmt(s.yPx, 2)]
+        [sizeLabel, fmt(s.displayedSizeCm, 3), fmt(s.displayedSizeCm / CM_PER_IN, 3), fmt(s.displayedSizeDeg, 3), fmt(s.displayedSizePx, 2)],
+        ['Offset from centre', fmt(s.offsetCm, 3), fmt(s.offsetCm / CM_PER_IN, 3), fmt(s.offsetDeg, 3), fmt(s.offsetPx, 2)],
+        ['Position X', fmt(s.xCm, 3), fmt(s.xCm / CM_PER_IN, 3), fmt(eccentricityCmToDeg(s.xCm, m.distCm), 3), fmt(s.xPx, 2)],
+        ['Position Y', fmt(s.yCm, 3), fmt(s.yCm / CM_PER_IN, 3), fmt(eccentricityCmToDeg(s.yCm, m.distCm), 3), fmt(s.yPx, 2)]
       ];
       els.stimulusTable.innerHTML = matrixTableHTML(columns, stimRows);
     }
@@ -1327,23 +1375,27 @@
       return [...table.querySelectorAll('tr')].map(tr => [...tr.children].map(cell => cell.textContent.trim()));
     }
 
-    function tableBlockSvg(title, matrix, x, y, width) {
+    function columnRatios(count) {
+      if (count <= 1) return [1];
+      const first = 0.28;
+      const rest = (1 - first) / (count - 1);
+      return [first, ...Array.from({ length: count - 1 }, () => rest)];
+    }
+
+    function tableOnlySvg(matrix, x, y, width, rowH) {
       if (!matrix.length) return { svg: '', height: 0 };
-      const ratios = [0.28, 0.18, 0.18, 0.18, 0.18];
-      const rowH = 42;
-      const titleGap = 18;
+      const cols = Math.max(...matrix.map(row => row.length), 0);
+      const ratios = columnRatios(cols || 1);
       const headerFill = 'rgba(21,34,61,0.9)';
       const cellFill = '#0f172a';
       const border = '#2b3a55';
       const text = '#e7eefc';
       const muted = '#d5e5ff';
-      const accent = '#4cc3ff';
-      const tableY = y + 34;
-      let out = `<text x="${x}" y="${y}" fill="${accent}" font-size="24" font-weight="700">${escapeXml(title)}</text>`;
+      let out = '';
       const colX = [x];
       for (let i = 0; i < ratios.length; i++) colX[i + 1] = colX[i] + width * ratios[i];
       for (let r = 0; r < matrix.length; r++) {
-        const rowY = tableY + r * rowH;
+        const rowY = y + r * rowH;
         const fill = r === 0 ? headerFill : cellFill;
         for (let c = 0; c < ratios.length; c++) {
           const cellX = colX[c];
@@ -1351,46 +1403,96 @@
           out += `<rect x="${cellX}" y="${rowY}" width="${cellW}" height="${rowH}" fill="${fill}" stroke="${border}"/>`;
           const weight = r === 0 || c === 0 ? '700' : '400';
           const color = r === 0 ? muted : text;
-          out += `<text x="${cellX + 10}" y="${rowY + 27}" fill="${color}" font-size="18" font-weight="${weight}">${escapeXml((matrix[r] && matrix[r][c]) || '')}</text>`;
+          const value = (matrix[r] && matrix[r][c]) || '';
+          out += `<text x="${cellX + 10}" y="${rowY + rowH * 0.64}" fill="${color}" font-size="${Math.max(12, rowH * 0.34)}" font-weight="${weight}">${escapeXml(value)}</text>`;
         }
       }
-      return { svg: out, height: 34 + matrix.length * rowH + titleGap };
+      return { svg: out, height: matrix.length * rowH };
+    }
+
+    function relRect(rect, base, scale = 1) {
+      return {
+        x: (rect.left - base.left) * scale,
+        y: (rect.top - base.top) * scale,
+        width: rect.width * scale,
+        height: rect.height * scale
+      };
+    }
+
+    function panelCardSvg(panelRect, headerRect, unionRect, scale, title) {
+      const panel = relRect(panelRect, unionRect, scale);
+      const header = relRect(headerRect, unionRect, scale);
+      return `
+        <rect x="${panel.x}" y="${panel.y}" width="${panel.width}" height="${panel.height}" rx="18" ry="18" fill="url(#panelGrad)" stroke="#2b3a55"/>
+        <path d="M ${panel.x + 18} ${panel.y} H ${panel.x + panel.width - 18} Q ${panel.x + panel.width} ${panel.y} ${panel.x + panel.width} ${panel.y + 18} V ${header.y + header.height} H ${panel.x} V ${panel.y + 18} Q ${panel.x} ${panel.y} ${panel.x + 18} ${panel.y} Z" fill="#14213d"/>
+        <line x1="${panel.x}" y1="${header.y + header.height}" x2="${panel.x + panel.width}" y2="${header.y + header.height}" stroke="#2b3a55"/>
+        <text x="${panel.x + 16 * scale}" y="${header.y + header.height * 0.62}" fill="#64d0ff" font-size="${Math.max(15, 16 * scale)}" font-weight="700" text-transform="uppercase">${escapeXml(title)}</text>
+      `;
     }
 
     async function copyDisplayImage() {
-      const section = document.getElementById('displayModelSection');
-      const rect = section.getBoundingClientRect();
-      const scale = 2.5;
-      const svg = els.displaySvg.cloneNode(true);
+      const modelCard = document.getElementById('displayModelSection')?.closest('.display-card');
+      const geomCard = els.displayGeometryTable?.closest('.display-card');
+      const stimCard = els.stimulusTable?.closest('.display-card');
+      if (!modelCard || !geomCard || !stimCard) return;
+
+      const cards = [modelCard, geomCard, stimCard];
+      const rects = cards.map(card => card.getBoundingClientRect());
+      const union = {
+        left: Math.min(...rects.map(r => r.left)),
+        top: Math.min(...rects.map(r => r.top)),
+        right: Math.max(...rects.map(r => r.right)),
+        bottom: Math.max(...rects.map(r => r.bottom))
+      };
+      union.width = union.right - union.left;
+      union.height = union.bottom - union.top;
+
+      const scale = 2;
+      const W = Math.max(1, Math.round(union.width * scale));
+      const H = Math.max(1, Math.round(union.height * scale));
+
+      const modelHeader = modelCard.querySelector('.panel-heading').getBoundingClientRect();
+      const geomHeader = geomCard.querySelector('.panel-heading').getBoundingClientRect();
+      const stimHeader = stimCard.querySelector('.panel-heading').getBoundingClientRect();
+      const modelBoxRect = modelCard.querySelector('.display-model-box').getBoundingClientRect();
+      const svgRect = els.displaySvg.getBoundingClientRect();
+      const geomTableRect = (els.displayGeometryTable.querySelector('table') || els.displayGeometryTable).getBoundingClientRect();
+      const stimTableRect = (els.stimulusTable.querySelector('table') || els.stimulusTable).getBoundingClientRect();
       const geomMatrix = extractTableMatrix(els.displayGeometryTable);
       const stimMatrix = extractTableMatrix(els.stimulusTable);
-      const MODEL_W = 880;
-      const MODEL_H = 540;
-      const W = Math.max(1600, Math.round(rect.width * scale));
-      const margin = 36;
-      const innerW = W - margin * 2;
-      const modelScale = innerW / MODEL_W;
-      const modelRenderedH = MODEL_H * modelScale;
-      const tableGap = 26;
-      const tableW = (innerW - tableGap) / 2;
-      const tableTop = margin + modelRenderedH + 24;
-      const geomBlock = tableBlockSvg('DISPLAY GEOMETRY', geomMatrix, margin, tableTop, tableW);
-      const stimBlock = tableBlockSvg('STIMULUS DIMENSIONS', stimMatrix, margin + tableW + tableGap, tableTop, tableW);
-      const tablesH = Math.max(geomBlock.height, stimBlock.height);
-      const H = Math.max(1000, Math.round(tableTop + tablesH + 40));
-      const serializedModel = new XMLSerializer().serializeToString(svg).replace(/^<svg[^>]*>|<\/svg>$/g,'');
-      const bg = '#0f172a';
-      const card = '#111a2e';
-      const border = '#2b3a55';
-      const textColor = '#e7eefc';
+
+      const svg = els.displaySvg.cloneNode(true);
+      const modelInner = new XMLSerializer().serializeToString(svg).replace(/^<svg[^>]*>|<\/svg>$/g, '');
+      const modelRect = relRect(modelBoxRect, union, scale);
+      const placedSvgRect = relRect(svgRect, union, scale);
+      const modelScale = placedSvgRect.width / 880;
+      const geomTable = relRect(geomTableRect, union, scale);
+      const stimTable = relRect(stimTableRect, union, scale);
+      const geomRowH = geomMatrix.length ? geomTable.height / geomMatrix.length : 34 * scale;
+      const stimRowH = stimMatrix.length ? stimTable.height / stimMatrix.length : 34 * scale;
+
       const wrapperSvg = `
         <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-          <rect width="100%" height="100%" fill="${bg}"/>
-          <rect x="20" y="20" width="${W - 40}" height="${H - 40}" rx="24" ry="24" fill="${card}" stroke="${border}"/>
-          <g transform="translate(${margin}, ${margin}) scale(${modelScale})">${serializedModel}</g>
-          ${geomBlock.svg}
-          ${stimBlock.svg}
+          <defs>
+            <linearGradient id="panelGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#121b31"/>
+              <stop offset="100%" stop-color="#0f172a"/>
+            </linearGradient>
+            <linearGradient id="boxGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="rgba(12,20,38,0.95)"/>
+              <stop offset="100%" stop-color="rgba(10,16,32,0.95)"/>
+            </linearGradient>
+          </defs>
+          <rect width="100%" height="100%" fill="#0b1220"/>
+          ${panelCardSvg(rects[0], modelHeader, union, scale, 'DISPLAY MODEL')}
+          ${panelCardSvg(rects[1], geomHeader, union, scale, 'DISPLAY GEOMETRY')}
+          ${panelCardSvg(rects[2], stimHeader, union, scale, 'STIMULUS DIMENSIONS')}
+          <rect x="${modelRect.x}" y="${modelRect.y}" width="${modelRect.width}" height="${modelRect.height}" rx="18" ry="18" fill="url(#boxGrad)" stroke="#2b3a55"/>
+          <g transform="translate(${placedSvgRect.x}, ${placedSvgRect.y}) scale(${modelScale})">${modelInner}</g>
+          ${tableOnlySvg(geomMatrix, geomTable.x, geomTable.y, geomTable.width, geomRowH).svg}
+          ${tableOnlySvg(stimMatrix, stimTable.x, stimTable.y, stimTable.width, stimRowH).svg}
         </svg>`;
+
       const blob = new Blob([wrapperSvg], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const img = new Image();
@@ -1405,16 +1507,16 @@
           try {
             if (navigator.clipboard && window.ClipboardItem) {
               await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
-              alert('Display model image copied.');
+              alert('Output copied.');
               return;
             }
             throw new Error('Clipboard image write not supported');
           } catch (err) {
             try {
               if (navigator.share) {
-                const file = new File([pngBlob], 'display-model.png', { type: 'image/png' });
+                const file = new File([pngBlob], 'output.png', { type: 'image/png' });
                 if (!navigator.canShare || navigator.canShare({ files: [file] })) {
-                  await navigator.share({ files: [file], title: 'Display model' });
+                  await navigator.share({ files: [file], title: 'Output' });
                   return;
                 }
               }
@@ -1422,7 +1524,7 @@
             }
             const a = document.createElement('a');
             a.href = canvas.toDataURL('image/png');
-            a.download = 'display-model.png';
+            a.download = 'output.png';
             a.click();
           }
         }, 'image/png');
@@ -1522,8 +1624,17 @@
       }
     }
 
+    function buildQueryStringFromState(state) {
+      const params = new URLSearchParams();
+      Object.entries(state).forEach(([key, value]) => {
+        if (value != null && String(value) !== '') params.set(key, String(value));
+      });
+      return params.toString();
+    }
+
     function currentShareUrl() {
-      return `${window.location.origin}${window.location.pathname}${window.location.search}${window.location.hash || ''}`;
+      const qs = buildQueryStringFromState(stateFromInputs());
+      return `${window.location.origin}${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash || ''}`;
     }
 
     function refreshShareOutputLink() {
@@ -1556,12 +1667,7 @@
 
     function updateUrlFromState() {
       if (!window.history || !window.history.replaceState) return;
-      const params = new URLSearchParams();
-      const state = stateFromInputs();
-      Object.entries(state).forEach(([key, value]) => {
-        if (value != null && String(value) !== '') params.set(key, String(value));
-      });
-      const qs = params.toString();
+      const qs = buildQueryStringFromState(stateFromInputs());
       const newUrl = `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash || ''}`;
       window.history.replaceState(null, '', newUrl);
       refreshShareOutputLink();
@@ -1626,8 +1732,6 @@
       els.stimShape.value = defaults.stimShape;
       els.stimOffsetValue.value = defaults.stimOffsetValue;
       els.stimOffsetAngle.value = defaults.stimOffsetAngle;
-      qa('.section').forEach(sec => sec.classList.remove('collapsed'));
-      els.collapseBtn.textContent = 'Collapse all';
       render();
     }
 
@@ -1649,24 +1753,6 @@
       renderDisplayModel(m, s);
       updateUrlFromState();
     }
-
-    qa('.section-header').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const section = btn.closest('.section');
-        section.classList.toggle('collapsed');
-        btn.querySelector('.caret').textContent = section.classList.contains('collapsed') ? '▸' : '▾';
-      });
-    });
-
-    els.collapseBtn.addEventListener('click', () => {
-      const sections = qa('.section');
-      const collapse = !sections.every(sec => sec.classList.contains('collapsed'));
-      sections.forEach(sec => {
-        sec.classList.toggle('collapsed', collapse);
-        sec.querySelector('.caret').textContent = collapse ? '▸' : '▾';
-      });
-      els.collapseBtn.textContent = collapse ? 'Expand all' : 'Collapse all';
-    });
 
     const oldUnitState = { value: currentSystem() === 'imperial' ? 'in' : 'cm' };
     els.systemRadios.forEach(r => r.addEventListener('change', () => {
@@ -1749,25 +1835,23 @@
     els.copyImageBtn.addEventListener('click', copyDisplayImage);
     if (els.shareOutputBtn) {
       els.shareOutputBtn.addEventListener('click', async (event) => {
+        event.preventDefault();
         const url = currentShareUrl();
         refreshShareOutputLink();
-        if (navigator.share) {
-          event.preventDefault();
-          try {
-            await navigator.share({ title: document.title, url });
-            return;
-          } catch (err) {
-            if (err && err.name === 'AbortError') return;
-          }
-        }
-        event.preventDefault();
         try {
           await navigator.clipboard.writeText(url);
           const original = els.shareOutputBtn.textContent;
           els.shareOutputBtn.textContent = 'Link copied';
           setTimeout(() => { els.shareOutputBtn.textContent = original; }, 1400);
         } catch (err) {
-          window.open(url, '_blank', 'noopener');
+          try {
+            if (navigator.share) {
+              await navigator.share({ title: document.title, url });
+              return;
+            }
+          } catch (shareErr) {
+          }
+          window.prompt('Copy this link:', url);
         }
       });
     }
@@ -1776,9 +1860,13 @@
       window.visualViewport.addEventListener('resize', render);
     }
 
-    resetDefaults();
-    refreshShareOutputLink();
-    if (applyStateFromUrl()) render();
+    const hadUrlState = applyStateFromUrl();
+    if (hadUrlState) {
+      render();
+    } else {
+      resetDefaults();
+      refreshShareOutputLink();
+    }
   </script>
 </body>
 </html>
