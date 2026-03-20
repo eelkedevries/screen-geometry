@@ -692,7 +692,7 @@
                   </select>
                 </div>
                 <div class="field">
-                  <label for="stimValue">Size</label>
+                  <label for="stimValue" id="stimValueLabel">Size</label>
                   <input id="stimValue" type="number" inputmode="decimal" autocomplete="off" min="0" step="any" value="1" />
                 </div>
                 <div class="field">
@@ -704,7 +704,7 @@
                   <input id="stimOffsetAngle" type="number" inputmode="decimal" autocomplete="off" step="any" value="0" />
                 </div>
               </div>
-              <div class="hint" style="margin-top:10px;">For circles, size is radius. For squares, size is side length. Offset angle uses 0° = right and 90° = up.</div>
+              <div class="hint" style="margin-top:10px;">For circles, size is diameter. For squares, size is side length. Offset angle uses 0° = right and 90° = up.</div>
             </div>
           </div>
         </div>
@@ -861,6 +861,7 @@
       resY: document.getElementById('resY'),
       stimUnit: document.getElementById('stimUnit'),
       stimValue: document.getElementById('stimValue'),
+      stimValueLabel: document.getElementById('stimValueLabel'),
       stimShape: document.getElementById('stimShape'),
       stimOffsetValue: document.getElementById('stimOffsetValue'),
       stimOffsetAngle: document.getElementById('stimOffsetAngle'),
@@ -1143,26 +1144,25 @@
 
       if (shape === 'circle') {
         if (unit === 'px') {
-          const radiusPx = sizeVal;
-          widthPx = radiusPx * 2;
-          heightPx = radiusPx * 2;
+          const diameterPx = sizeVal;
+          widthPx = diameterPx;
+          heightPx = diameterPx;
           widthCm = widthPx * m.pxCmX;
           heightCm = heightPx * m.pxCmY;
           widthDeg = sizeToDeg(widthCm, m.distCm);
           heightDeg = sizeToDeg(heightCm, m.distCm);
         } else if (unit === 'deg' || unit === 'arcmin') {
-          const radiusDeg = unit === 'deg' ? sizeVal : sizeVal / 60;
-          const radiusCm = degToEccentricityCm(radiusDeg, m.distCm);
-          widthCm = radiusCm * 2;
-          heightCm = radiusCm * 2;
+          const diameterDeg = unit === 'deg' ? sizeVal : sizeVal / 60;
+          widthDeg = diameterDeg;
+          heightDeg = diameterDeg;
+          widthCm = degToSizeCm(diameterDeg, m.distCm);
+          heightCm = degToSizeCm(diameterDeg, m.distCm);
           widthPx = widthCm / m.pxCmX;
           heightPx = heightCm / m.pxCmY;
-          widthDeg = sizeToDeg(widthCm, m.distCm);
-          heightDeg = sizeToDeg(heightCm, m.distCm);
         } else {
-          const radiusCm = toCm(sizeVal, unit);
-          widthCm = radiusCm * 2;
-          heightCm = radiusCm * 2;
+          const diameterCm = toCm(sizeVal, unit);
+          widthCm = diameterCm;
+          heightCm = diameterCm;
           widthPx = widthCm / m.pxCmX;
           heightPx = heightCm / m.pxCmY;
           widthDeg = sizeToDeg(widthCm, m.distCm);
@@ -1803,13 +1803,20 @@
       render();
     }
 
+
     function syncGeometryMode() {
       updateGeometryFields();
+    }
+
+    function updateStimulusLabels() {
+      if (!els.stimValueLabel || !els.stimShape) return;
+      els.stimValueLabel.textContent = els.stimShape.value === 'circle' ? 'Diameter' : 'Size';
     }
 
     function render() {
       updateUnitUI();
       syncGeometryMode();
+      updateStimulusLabels();
       updateBrowserInfo();
       const m = getMetrics();
       const s = getStimulusMetrics(m);
