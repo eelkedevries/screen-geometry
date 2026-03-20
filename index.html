@@ -1113,15 +1113,17 @@
       };
     }
 
+
     function sizeFromAny(value, unit, axis, m, interpretation = 'span') {
-      if (!isFinite(value)) return { cm: NaN, pxX: NaN, pxY: NaN, deg: NaN };
+      if (!isFinite(value)) return { cm: NaN, px: NaN, deg: NaN };
       let sizeCm;
       if (unit === 'deg') sizeCm = interpretation === 'ecc' ? degToEccentricityCm(value, m.distCm) : degToSizeCm(value, m.distCm);
       else if (unit === 'arcmin') sizeCm = interpretation === 'ecc' ? degToEccentricityCm(value / 60, m.distCm) : degToSizeCm(value / 60, m.distCm);
       else if (unit === 'px') sizeCm = value * (axis === 'y' ? m.pxCmY : m.pxCmX);
       else if (unit === 'cm' || unit === 'mm' || unit === 'in') sizeCm = toCm(value, unit);
       const deg = interpretation === 'ecc' ? eccentricityCmToDeg(sizeCm, m.distCm) : sizeToDeg(sizeCm, m.distCm);
-      return { cm: sizeCm, pxX: sizeCm / m.pxCmX, pxY: sizeCm / m.pxCmY, deg };
+      const px = sizeCm / (axis === 'y' ? m.pxCmY : m.pxCmX);
+      return { cm: sizeCm, px, deg };
     }
 
     function getStimulusMetrics(m) {
@@ -1132,11 +1134,69 @@
       const offsetVal = Number(els.stimOffsetValue.value);
       const offsetUnit = els.stimUnit.value;
       const angleDeg = Number(els.stimOffsetAngle.value);
+      if (!isFinite(sizeVal) || !(sizeVal >= 0) || !isFinite(offsetVal) || !isFinite(angleDeg)) return null;
+
       const sign = offsetVal < 0 ? -1 : 1;
       const theta = angleDeg * Math.PI / 180;
 
-      const sizeInterpretation = shape === 'circle' ? 'ecc' : 'span';
-      const size = sizeFromAny(sizeVal, unit, 'x', m, sizeInterpretation);
+      let widthCm, heightCm, widthPx, heightPx, widthDeg, heightDeg, halfWidthCm, halfHeightCm;
+
+      if (shape === 'circle') {
+        if (unit === 'px') {
+          const radiusPx = sizeVal;
+          widthPx = radiusPx * 2;
+          heightPx = radiusPx * 2;
+          widthCm = widthPx * m.pxCmX;
+          heightCm = heightPx * m.pxCmY;
+          widthDeg = sizeToDeg(widthCm, m.distCm);
+          heightDeg = sizeToDeg(heightCm, m.distCm);
+        } else if (unit === 'deg' || unit === 'arcmin') {
+          const radiusDeg = unit === 'deg' ? sizeVal : sizeVal / 60;
+          const radiusCm = degToEccentricityCm(radiusDeg, m.distCm);
+          widthCm = radiusCm * 2;
+          heightCm = radiusCm * 2;
+          widthPx = widthCm / m.pxCmX;
+          heightPx = heightCm / m.pxCmY;
+          widthDeg = sizeToDeg(widthCm, m.distCm);
+          heightDeg = sizeToDeg(heightCm, m.distCm);
+        } else {
+          const radiusCm = toCm(sizeVal, unit);
+          widthCm = radiusCm * 2;
+          heightCm = radiusCm * 2;
+          widthPx = widthCm / m.pxCmX;
+          heightPx = heightCm / m.pxCmY;
+          widthDeg = sizeToDeg(widthCm, m.distCm);
+          heightDeg = sizeToDeg(heightCm, m.distCm);
+        }
+      } else {
+        if (unit === 'px') {
+          widthPx = sizeVal;
+          heightPx = sizeVal;
+          widthCm = widthPx * m.pxCmX;
+          heightCm = heightPx * m.pxCmY;
+          widthDeg = sizeToDeg(widthCm, m.distCm);
+          heightDeg = sizeToDeg(heightCm, m.distCm);
+        } else if (unit === 'deg' || unit === 'arcmin') {
+          const sideDeg = unit === 'deg' ? sizeVal : sizeVal / 60;
+          widthDeg = sideDeg;
+          heightDeg = sideDeg;
+          widthCm = degToSizeCm(sideDeg, m.distCm);
+          heightCm = degToSizeCm(sideDeg, m.distCm);
+          widthPx = widthCm / m.pxCmX;
+          heightPx = heightCm / m.pxCmY;
+        } else {
+          const sideCm = toCm(sizeVal, unit);
+          widthCm = sideCm;
+          heightCm = sideCm;
+          widthPx = widthCm / m.pxCmX;
+          heightPx = heightCm / m.pxCmY;
+          widthDeg = sizeToDeg(widthCm, m.distCm);
+          heightDeg = sizeToDeg(heightCm, m.distCm);
+        }
+      }
+
+      halfWidthCm = widthCm / 2;
+      halfHeightCm = heightCm / 2;
 
       let offsetAbsCm;
       let offsetAbsDeg;
@@ -1180,27 +1240,21 @@
         offsetAbsDeg = eccentricityCmToDeg(offsetAbsCm, m.distCm);
       }
 
-      const radiusOrHalfSideCm = size.cm;
-      const radiusOrHalfSidePxX = size.pxX;
-      const radiusOrHalfSidePxY = size.pxY;
-      const displayedSizeCm = shape === 'circle' ? radiusOrHalfSideCm * 2 : radiusOrHalfSideCm;
-      const displayedSizePx = shape === 'circle' ? radiusOrHalfSidePxX * 2 : radiusOrHalfSidePxX;
-      const displayedSizeDeg = shape === 'circle'
-        ? sizeToDeg(radiusOrHalfSideCm * 2, m.distCm)
-        : size.deg;
+      const xDeg = eccentricityCmToDeg(xCm, m.distCm);
+      const yDeg = eccentricityCmToDeg(yCm, m.distCm);
       const areaCm2 = shape === 'circle'
-        ? Math.PI * radiusOrHalfSideCm * radiusOrHalfSideCm
-        : radiusOrHalfSideCm * radiusOrHalfSideCm;
+        ? Math.PI * (widthCm / 2) * (heightCm / 2)
+        : widthCm * heightCm;
       const areaDeg2 = shape === 'circle'
-        ? Math.PI * Math.pow(eccentricityCmToDeg(radiusOrHalfSideCm, m.distCm), 2)
-        : size.deg * size.deg;
+        ? Math.PI * (widthDeg / 2) * (heightDeg / 2)
+        : widthDeg * heightDeg;
+
       return {
         shape, unit, sizeVal, angleDeg, offsetVal,
-        sizeCm: radiusOrHalfSideCm, sizeDeg: size.deg,
-        sizePxX: radiusOrHalfSidePxX, sizePxY: radiusOrHalfSidePxY,
-        displayedSizeCm, displayedSizeDeg, displayedSizePx,
+        widthCm, heightCm, widthPx, heightPx, widthDeg, heightDeg,
+        halfWidthCm, halfHeightCm,
         offsetCm: sign * offsetAbsCm, offsetDeg: sign * offsetAbsDeg, offsetPx: sign * offsetAbsPx,
-        xCm, yCm, xPx, yPx, areaCm2, areaDeg2
+        xCm, yCm, xPx, yPx, xDeg, yDeg, areaCm2, areaDeg2
       };
     }
 
@@ -1217,6 +1271,7 @@
       const body = rows.map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell ?? '')}</td>`).join('')}</tr>`).join('');
       return `<div class="table-scroll"><table class="matrix-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
     }
+
 
     function updateTables(m, s) {
       const columns = ['', 'cm', 'inch', 'degrees', 'pixels'];
@@ -1241,15 +1296,25 @@
         return;
       }
 
-      const sizeLabel = s.shape === 'circle' ? 'Diameter' : 'Width';
+      const sizeRows = s.shape === 'circle'
+        ? [
+            ['Diameter X', fmt(s.widthCm, 3), fmt(s.widthCm / CM_PER_IN, 3), fmt(s.widthDeg, 3), fmt(s.widthPx, 2)],
+            ['Diameter Y', fmt(s.heightCm, 3), fmt(s.heightCm / CM_PER_IN, 3), fmt(s.heightDeg, 3), fmt(s.heightPx, 2)]
+          ]
+        : [
+            ['Width', fmt(s.widthCm, 3), fmt(s.widthCm / CM_PER_IN, 3), fmt(s.widthDeg, 3), fmt(s.widthPx, 2)],
+            ['Height', fmt(s.heightCm, 3), fmt(s.heightCm / CM_PER_IN, 3), fmt(s.heightDeg, 3), fmt(s.heightPx, 2)]
+          ];
+
       const stimRows = [
-        [sizeLabel, fmt(s.displayedSizeCm, 3), fmt(s.displayedSizeCm / CM_PER_IN, 3), fmt(s.displayedSizeDeg, 3), fmt(s.displayedSizePx, 2)],
+        ...sizeRows,
         ['Offset from centre', fmt(s.offsetCm, 3), fmt(s.offsetCm / CM_PER_IN, 3), fmt(s.offsetDeg, 3), fmt(s.offsetPx, 2)],
-        ['Position X', fmt(s.xCm, 3), fmt(s.xCm / CM_PER_IN, 3), fmt(eccentricityCmToDeg(s.xCm, m.distCm), 3), fmt(s.xPx, 2)],
-        ['Position Y', fmt(s.yCm, 3), fmt(s.yCm / CM_PER_IN, 3), fmt(eccentricityCmToDeg(s.yCm, m.distCm), 3), fmt(s.yPx, 2)]
+        ['Position X', fmt(s.xCm, 3), fmt(s.xCm / CM_PER_IN, 3), fmt(s.xDeg, 3), fmt(s.xPx, 2)],
+        ['Position Y', fmt(s.yCm, 3), fmt(s.yCm / CM_PER_IN, 3), fmt(s.yDeg, 3), fmt(s.yPx, 2)]
       ];
       els.stimulusTable.innerHTML = matrixTableHTML(columns, stimRows);
     }
+
 
     function updateCoreOutputs(m) {
       if (!m) {
@@ -1330,6 +1395,7 @@
       els.physicalTestLine.style.width = `${Math.max(0, cssWidth)}px`;
     }
 
+
     function renderDisplayModel(m, s) {
       if (!m || !s) { els.displaySvg.innerHTML = ''; return; }
       const W = 880, H = 540;
@@ -1345,9 +1411,10 @@
       const centerY = dispY + dispH / 2;
       const stimX = centerX + s.xCm * scale;
       const stimY = centerY - s.yCm * scale;
-      const radiusX = s.sizeCm * scale;
-      const radiusY = s.sizeCm * scale;
-      const side = s.sizeCm * scale;
+      const stimW = s.widthCm * scale;
+      const stimH = s.heightCm * scale;
+      const radiusX = stimW / 2;
+      const radiusY = stimH / 2;
 
       els.displaySvg.innerHTML = `
         <rect x="0" y="0" width="${W}" height="${H}" fill="none"/>
@@ -1355,10 +1422,11 @@
 
         ${s.shape === 'circle'
           ? `<ellipse cx="${stimX}" cy="${stimY}" rx="${radiusX}" ry="${radiusY}" fill="rgba(76,195,255,0.22)" stroke="#4cc3ff" stroke-width="3"/>`
-          : `<rect x="${stimX - side/2}" y="${stimY - side/2}" width="${side}" height="${side}" fill="rgba(76,195,255,0.22)" stroke="#4cc3ff" stroke-width="3"/>`
+          : `<rect x="${stimX - stimW/2}" y="${stimY - stimH/2}" width="${stimW}" height="${stimH}" fill="rgba(76,195,255,0.22)" stroke="#4cc3ff" stroke-width="3"/>`
         }
       `;
     }
+
 
     function escapeXml(value) {
       return String(value)
